@@ -1,0 +1,13 @@
+date,posted_date,description,amount,currency,direction,category,account,source_bank,external_id
+2026-01-03,,NETFLIX.COM 866-579-7172 CA,-15.99,USD,outflow,Subscriptions,Chase Checking,chase_checking,719a6b4a0f4ef47d
+2026-01-05,,ACME PAYROLL PPD ID: 998877,2450.00,USD,inflow,Income,Chase Checking,chase_checking,c7729944510104a2
+2026-01-06,,KROGER #445 AUSTIN TX,-86.42,USD,outflow,Groceries,Chase Checking,chase_checking,ef5351d795c986cb
+2026-01-07,,SHELL OIL 1029384,-42.18,USD,outflow,Transport,Chase Checking,chase_checking,fc42ba778e014864
+2026-01-09,,COMCAST CABLE COMM,-62.10,USD,outflow,Utilities,Chase Checking,chase_checking,349d808924c4e2ca
+2026-01-11,,STARBUCKS STORE 8841,-6.45,USD,outflow,Dining,Chase Checking,chase_checking,5f445204cc5dee10
+2026-01-15,,RENT PAYMENT OAK APARTMENTS,-1400.00,USD,outflow,Housing,Chase Checking,chase_checking,034c0af1844ea4df
+2026-01-20,,ATM FEE,-2.50,USD,outflow,Fees,Chase Checking,chase_checking,2b7ceba14802739c
+2026-01-21,,"AMAZON MARKETPLACE, SEATTLE",-34.12,USD,outflow,Shopping,Chase Checking,chase_checking,f613e8796933ff25
+2026-02-03,,NETFLIX.COM 866-579-7172 CA,-15.99,USD,outflow,Subscriptions,Chase Checking,chase_checking,cecb1d36d2d447da
+2026-02-05,,ACME PAYROLL PPD ID: 998877,2450.00,USD,inflow,Income,Chase Checking,chase_checking,6bdf6eb89747a277
+2026-02-15,,RENT PAYMENT OAK APARTMENTS,-1400.00,USD,outflow,Housing,Chase Checking,chase_checking,8768a4cb157efcb8
