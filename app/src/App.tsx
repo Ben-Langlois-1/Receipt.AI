@@ -1,34 +1,22 @@
 import './App.css'
-import type { ReactNode } from 'react'
+import { useState } from 'react' // React state helpers and types, changed from 'import React, { useState } from 'react'' to avoid importing the entire React namespace
 
-type ButtonVariant = 'primary' | 'secondary' | 'tertiary'
+// import pages from '.pages/'
+import OverviewPage from './pages/OverviewPage'
+import TransactionsPage from './pages/TransactionsPage'
+import BudgetsPage from './pages/BudgetsPage'
+import RecurringExpensesPage from './pages/Recurring-ExpensesPage'
+import AIAdvisorPage from './pages/AI-AdvisorPage'
+import SettingsandPrivacyPage from './pages/Settings-and-PrivacyPage'
 
-function Button({
-  children,
-  variant = 'secondary',
-}: {
-  children: ReactNode
-  variant?: ButtonVariant
-}) {
-  return <button className={`btn ${variant}`}>{children}</button>
-}
-
-function Card({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <section className="card">
-      <header className="card-header">
-        <h3>{title}</h3>
-      </header>
-      {children}
-    </section>
-  )
-}
-
-function StatusBadge({ label, kind }: { label: string; kind: 'info' | 'warn' | 'good' }) {
-  return <span className={`badge ${kind}`}>{label}</span>
-}
+import { Card, Button} from './components.tsx'
 
 function App() {
+
+  // =============================== NAV ITEM SETUP AND STATE MANAGEMENT ===============================
+
+  const [activeNavItem, setActiveNavItem] = useState('Overview') // State to track the currently active navigation item
+
   const navItems = [
     'Overview',
     'Transactions',
@@ -37,6 +25,39 @@ function App() {
     'AI Advisor',
     'Settings & Privacy',
   ]
+
+  const navDescriptions: Record<string, string> = { // Descriptions for each navigation item to display below the page title
+    'Overview': 'View your overall financial health and key metrics.',
+    'Transactions': 'Browse and manage your financial transactions.',
+    'Budgets': 'Set and track your budgets for different categories.',
+    'Recurring Expenses': 'Manage your recurring expenses and subscriptions.',
+    'AI Advisor': 'Get AI-driven insights and recommendations for your finances.',
+    'Settings & Privacy': 'Adjust your app settings and privacy preferences.',
+   }
+
+  function renderPage() {
+    switch (activeNavItem) {
+      case 'Transactions':
+        return <TransactionsPage/>
+
+      case 'Budgets': // =================== START OF BUDGETS PAGE ===================
+        return <BudgetsPage/>
+      
+      case 'Recurring Expenses': // =================== START OF RECURRING EXPENSES PAGE ===================
+        return <RecurringExpensesPage/>
+
+      case 'AI Advisor': // =================== START OF AI ADVISOR PAGE ===================
+        return <AIAdvisorPage/>
+
+      case 'Settings & Privacy': // =================== START OF SETTINGS & PRIVACY PAGE ===================
+        return <SettingsandPrivacyPage/>
+
+      case 'Overview': // =================== START OF OVERVIEW PAGE =================== default view when the app is first loaded
+      default:
+        return <OverviewPage/>
+    }
+
+  }
 
   return (
     <div className="app-shell">
@@ -47,7 +68,10 @@ function App() {
           <ul className="nav-list">
             {navItems.map((item) => (
               <li key={item}>
-                <button className={`nav-item ${item === 'Overview' ? 'active' : ''}`}>{item}</button>
+                <button className={`nav-item ${item === activeNavItem ? 'active' : ''}`} //sets active page based on the state of activeNavItem, allows change with onClick event
+                  onClick={() => setActiveNavItem(item)}>
+                  {item}
+                </button>
               </li>
             ))}
           </ul>
@@ -57,7 +81,12 @@ function App() {
       <div className="main-column">
         <header className="top-bar">
           <div>
-            <h2>Overview Dashboard</h2>
+
+            {/* Dynamically updates page title based on active nav item */}
+            <h2>{ activeNavItem == 'Overview' ? 'Overview Dashboard' : activeNavItem } 
+              </h2> 
+
+            <p className="muted">{navDescriptions[activeNavItem]}</p>
             <p className="muted">October 2026</p>
           </div>
           <div className="top-actions">
@@ -67,95 +96,7 @@ function App() {
         </header>
 
         <main className="content">
-          <section className="kpi-grid" aria-label="Key finance metrics">
-            <Card title="Current month spending">
-              <p className="metric">$2,184</p>
-            </Card>
-            <Card title="Total income">
-              <p className="metric">$4,850</p>
-            </Card>
-            <Card title="Total expenses">
-              <p className="metric">$2,932</p>
-            </Card>
-            <Card title="Remaining budget">
-              <p className="metric">$1,168</p>
-            </Card>
-          </section>
-
-          <section className="split-grid">
-            <Card title="Spending by category">
-              <p className="muted">Chart placeholder</p>
-              <div className="bar-row">
-                <span>Housing</span>
-                <div className="bar"><span style={{ width: '82%' }} /></div>
-              </div>
-              <div className="bar-row">
-                <span>Dining</span>
-                <div className="bar"><span style={{ width: '48%' }} /></div>
-              </div>
-              <div className="bar-row">
-                <span>Groceries</span>
-                <div className="bar"><span style={{ width: '36%' }} /></div>
-              </div>
-            </Card>
-
-            <Card title="Monthly trend">
-              <p className="muted">No data visualization wired yet.</p>
-              <div className="empty-state">No data for this chart yet.</div>
-            </Card>
-          </section>
-
-          <section className="split-grid">
-            <Card title="Recent transactions">
-              <table className="table">
-                <thead>
-                  <tr>
-                    <th>Date</th>
-                    <th>Merchant</th>
-                    <th>Amount</th>
-                    <th>Category</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td>2026-10-12</td>
-                    <td>North Grocery</td>
-                    <td>$84.22</td>
-                    <td>Groceries</td>
-                    <td><StatusBadge label="User Confirmed" kind="good" /></td>
-                  </tr>
-                  <tr>
-                    <td>2026-10-11</td>
-                    <td>Blue Bistro</td>
-                    <td>$42.10</td>
-                    <td>Dining</td>
-                    <td><StatusBadge label="Suggested" kind="info" /></td>
-                  </tr>
-                  <tr>
-                    <td>2026-10-10</td>
-                    <td>CloudPlay</td>
-                    <td>$9.99</td>
-                    <td>-</td>
-                    <td><StatusBadge label="Uncategorized" kind="warn" /></td>
-                  </tr>
-                </tbody>
-              </table>
-            </Card>
-
-            <Card title="AI summary">
-              <p>
-                Dining spending increased by <strong>18%</strong> this month compared with last month.
-              </p>
-              <p className="muted">
-                Why am I seeing this? 6 transactions across 3 merchants in the past 30 days.
-              </p>
-              <div className="card-actions">
-                <Button variant="tertiary">Why this recommendation?</Button>
-                <Button variant="secondary">Review category changes</Button>
-              </div>
-            </Card>
-          </section>
+          {renderPage()}
         </main>
 
         <footer className="status-strip">
