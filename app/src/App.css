@@ -102,11 +102,23 @@
   font-size: 16px;
 }
 
+/* =============== Metric formatting and colors ================= */
+
 .metric {
   margin: 0;
   font-size: 28px;
   font-weight: 600;
 }
+
+.metric-pos {
+  color: #81f09f;
+}
+
+.metric-neg {
+  color: #f77e7e;
+}
+
+/* ================= End of metric ================ */
 
 .muted {
   color: var(--text-muted);

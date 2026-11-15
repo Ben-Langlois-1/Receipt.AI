@@ -1,15 +1,33 @@
 import { Card, Button, StatusBadge } from '../components.tsx'
 
-export default function OverviewPage() {
+import type { LedgerTransaction } from '../finance/types.ts'
+
+// importing JavScript
+import { totalAmount, SpendingIncome } from '../JavaScript/calculations.js'
+
+type TransactionsPageProps = {
+    transactions: LedgerTransaction[]
+}
+
+
+export default function OverviewPage({ transactions }: TransactionsPageProps) {
+
+    const net = totalAmount(transactions)
+
+    const { spendingTotal, incomeTotal } = SpendingIncome(transactions)
+
   return ( <>
+
+        <h2>Monthly Summary</h2>
+
     <section className="kpi-grid" aria-label="Key finance metrics">
-        <Card title="Current month spending">
+        <Card title="Spending">
             <p className="metric">$2,184</p>
         </Card>
-        <Card title="Total income">
+        <Card title="Income">
             <p className="metric">$4,850</p>
         </Card>
-        <Card title="Total expenses">
+        <Card title="Net cash flow">
             <p className="metric">$2,932</p>
         </Card>
         <Card title="Remaining budget">
@@ -17,6 +35,22 @@ export default function OverviewPage() {
         </Card>
     </section>
 
+        <h2>All-Time Activity</h2>
+    <section className="kpi-grid" aria-label="Key finance metrics">
+        <Card title="Net value">
+            <p className="metric">${net.toFixed(2)}</p>
+        </Card>
+
+        <Card title="Total spending">
+            <p className="metric">${Math.abs(spendingTotal).toFixed(2)}</p>
+        </Card>
+
+        <Card title="Total income">
+            <p className="metric">${incomeTotal.toFixed(2)}</p>
+        </Card>
+    </section>
+
+        <h2>Visualizations</h2>
     <section className="split-grid">
         <Card title="Spending by category">
             <p className="muted">Chart placeholder</p>
@@ -54,25 +88,25 @@ export default function OverviewPage() {
             </thead>
             <tbody>
                 <tr>
-                <td>2026-10-12</td>
-                <td>North Grocery</td>
-                <td>$84.22</td>
-                <td>Groceries</td>
-                <td><StatusBadge label="User Confirmed" kind="good" /></td>
+                    <td>{transactions[transactions.length -1]?.date}</td>
+                    <td>{transactions[transactions.length -1]?.description}</td>
+                    <td>{transactions[transactions.length -1]?.amount}</td>
+                    <td>{transactions[transactions.length -1]?.category}</td>
+                    <td><StatusBadge label="User Confirmed" kind="good" /></td>
                 </tr>
                 <tr>
-                <td>2026-10-11</td>
-                <td>Blue Bistro</td>
-                <td>$42.10</td>
-                <td>Dining</td>
-                <td><StatusBadge label="Suggested" kind="info" /></td>
+                    <td>{transactions[transactions.length -2]?.date}</td>
+                    <td>{transactions[transactions.length -2]?.description}</td>
+                    <td>{transactions[transactions.length -2]?.amount}</td>
+                    <td>{transactions[transactions.length -2]?.category}</td>
+                    <td><StatusBadge label="Suggested" kind="info" /></td>
                 </tr>
                 <tr>
-                <td>2026-10-10</td>
-                <td>CloudPlay</td>
-                <td>$9.99</td>
-                <td>-</td>
-                <td><StatusBadge label="Uncategorized" kind="warn" /></td>
+                    <td>{transactions[transactions.length -3]?.date}</td>
+                    <td>{transactions[transactions.length -3]?.description}</td>
+                    <td>{transactions[transactions.length -3]?.amount}</td>
+                    <td>{transactions[transactions.length -3]?.category}</td>
+                    <td><StatusBadge label="Uncategorized" kind="warn" /></td>
                 </tr>
             </tbody>
             </table>
