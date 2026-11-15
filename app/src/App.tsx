@@ -1,7 +1,17 @@
 import './App.css'
-import { useState } from 'react' // React state helpers and types, changed from 'import React, { useState } from 'react'' to avoid importing the entire React namespace
+import { useRef, useState } from 'react' // React state helpers and types, changed from 'import React, { useState } from 'react'' to avoid importing the entire React namespace
 
-// import pages from '.pages/'
+// importing import logic and types
+import { importStatement } from './finance/import-statement.ts' // imports 
+import type { ImportResult } from './finance/types.ts' // imports the type definition for the result of the importStatement function
+
+// importing and saving data
+
+import { mergeLedger } from './finance/ledger.ts' // imports the mergeLedger function to combine new transactions with existing ledger data
+import {loadLocalLedger, saveLocalLedger} from './finance/local-ledger.ts' // imports functions to load and save the ledger data from/to local storage
+import type {LedgerTransaction} from './finance/types.ts' // imports the type definition for a ledger transaction
+
+// importing pages
 import OverviewPage from './pages/OverviewPage'
 import TransactionsPage from './pages/TransactionsPage'
 import BudgetsPage from './pages/BudgetsPage'
@@ -9,6 +19,9 @@ import RecurringExpensesPage from './pages/Recurring-ExpensesPage'
 import AIAdvisorPage from './pages/AI-AdvisorPage'
 import SettingsandPrivacyPage from './pages/Settings-and-PrivacyPage'
 
+import ImportPreview from './pages/ImportPreview.tsx' // imports the ImportPreview component to display the result of the import operation
+
+// importing components
 import { Card, Button} from './components.tsx'
 
 function App() {
@@ -35,10 +48,36 @@ function App() {
     'Settings & Privacy': 'Adjust your app settings and privacy preferences.',
    }
 
+  // =============================== FILE INPUT ===============================
+
+  const fileInputRef = useRef<HTMLInputElement>(null) // Ref to the hidden file input element
+
+  // =============================== DATA IMPORT (pending data/filename) ===============================
+
+  const [pendingImport, setPendingImport] = useState<ImportResult | null>(null) // State to hold the result of the import operation (can either be sucess or fail/null)
+  const [pendingFileName, setPendingFileName] = useState('') // State to hold the name of the file being imported
+
+  // =============================== DATA STORAGE (ledger) ===============================
+
+  const [ledger, setLedger] = useState<LedgerTransaction[]>(() => loadLocalLedger()) // State to hold the current ledger data, initialized with data loaded from local storage
+
+  function handleImportConfirmation() { // Function to handle the confirmation of the import operation
+    if (!pendingImport?.ok) return // If the import result is not successful, do nothing
+
+    const updatedLedger = mergeLedger(ledger, pendingImport.transactions) // Merge the new transactions with the existing ledger
+    saveLocalLedger(updatedLedger) // Save the updated ledger to local storage
+    setLedger(updatedLedger) // Update the state with the new ledger data
+
+    setPendingImport(null) // Clear the pending import state
+    setPendingFileName('') // Clear the pending file name state
+  }
+
+  // ================================= PAGE RENDERING BASED ON ACTIVE NAV ITEM =================================
+
   function renderPage() {
     switch (activeNavItem) {
       case 'Transactions':
-        return <TransactionsPage/>
+        return <TransactionsPage transactions={ledger} />
 
       case 'Budgets': // =================== START OF BUDGETS PAGE ===================
         return <BudgetsPage/>
@@ -90,12 +129,68 @@ function App() {
             <p className="muted">October 2026</p>
           </div>
           <div className="top-actions">
-            <Button variant="secondary">Import CSV</Button>
-            <Button variant="primary">Review Uncategorized</Button>
+
+{/* ============================ IMPORT CSV BUTTON ============================ */}
+
+            <Button variant="secondary"
+
+            // click on button refers to the hidden input element
+              onClick={() => {
+                fileInputRef.current?.click()
+                console.log('Import CSV button clicked, opening file dialog...')
+              }}>
+
+                Import CSV
+
+            </Button>
+
+
+            {/* hidden input element */}
+            <input ref={fileInputRef} type="file" accept=".csv,text/csv" hidden 
+              onChange={async (e) => {
+                const file = e.currentTarget.files?.[0]
+                if (!file) return
+
+                try {
+                  const text = await file.text()
+                  console.log(`Read ${file.name}: ${text.length} characters`)
+
+                  const transactionsResult = importStatement(text) // sends the text of the CSV file to the importStatement function for processing
+                    //transactionResult returns the object containing sucess/fail status, profile label, transaction count, and issues
+                  
+                  setPendingImport(transactionsResult) // updates PendingImport with the result of the importStatement function (success or fail)
+                  setPendingFileName(file.name) // updates PendingFileName with the name of the file being imported
+                    // "pending" means it has been processed but not yet reviewed, so is only stored in memory
+
+                  console.log({
+                    fileName: file.name,
+                    success: transactionsResult.ok,
+                    format: transactionsResult.profileLabel,
+                    transactionCount: transactionsResult.transactions.length,
+                    issues: transactionsResult.issues,
+                  })
+
+                } catch (error) {
+                  console.error('Error reading file:', error)
+                }
+
+            }} />
+
+            <Button variant="primary" onClick={() => console.log('Review Uncategorized clicked')}>Review Uncategorized</Button>
+            
           </div>
         </header>
 
         <main className="content">
+          {pendingImport && (
+            <ImportPreview filename={pendingFileName} importResult={pendingImport} 
+            onConfirm={handleImportConfirmation}
+            onClose={() => { // sends filename and import to ImportPreview
+              setPendingImport(null) // clears the pending import state when the close button is clicked
+              setPendingFileName('') // clears the pending file name state when the close button is clicked
+            }}
+            />
+          )}
           {renderPage()}
         </main>
 

@@ -5,11 +5,15 @@ type ButtonVariant = 'primary' | 'secondary' | 'tertiary'
 export function Button({
   children,
   variant = 'secondary',
+  onClick,
 }: {
   children: ReactNode
   variant?: ButtonVariant
+  onClick?: () => void
 }) {
-  return <button className={`btn ${variant}`}>{children}</button>
+  return <button className={`btn ${variant}`} onClick={onClick}>
+    {children}
+  </button>
 }
 
 export function Card({ title, children }: { title: string; children: ReactNode }) {
