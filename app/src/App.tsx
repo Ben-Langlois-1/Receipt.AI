@@ -8,8 +8,8 @@ import type { ImportResult } from './finance/types.ts' // imports the type defin
 // importing and saving data
 
 import { mergeLedger } from './finance/ledger.ts' // imports the mergeLedger function to combine new transactions with existing ledger data
-import {loadLocalLedger, saveLocalLedger} from './finance/local-ledger.ts' // imports functions to load and save the ledger data from/to local storage
-import type {LedgerTransaction} from './finance/types.ts' // imports the type definition for a ledger transaction
+import { loadLocalLedger, saveLocalLedger } from './finance/local-ledger.ts' // imports functions to load and save the ledger data from/to local storage
+import type { LedgerTransaction } from './finance/types.ts' // imports the type definition for a ledger transaction
 
 // importing pages
 import OverviewPage from './pages/OverviewPage'
@@ -20,6 +20,11 @@ import AIAdvisorPage from './pages/AI-AdvisorPage'
 import SettingsandPrivacyPage from './pages/Settings-and-PrivacyPage'
 
 import ImportPreview from './pages/ImportPreview.tsx' // imports the ImportPreview component to display the result of the import operation
+
+
+import { recentTransaction } from './JavaScript/calculations.js'
+
+
 
 // importing components
 import { Card, Button} from './components.tsx'
@@ -61,6 +66,8 @@ function App() {
 
   const [ledger, setLedger] = useState<LedgerTransaction[]>(() => loadLocalLedger()) // State to hold the current ledger data, initialized with data loaded from local storage
 
+  const mostRecent = recentTransaction(ledger)
+
   function handleImportConfirmation() { // Function to handle the confirmation of the import operation
     if (!pendingImport?.ok) return // If the import result is not successful, do nothing
 
@@ -93,7 +100,7 @@ function App() {
 
       case 'Overview': // =================== START OF OVERVIEW PAGE =================== default view when the app is first loaded
       default:
-        return <OverviewPage/>
+        return <OverviewPage transactions={ledger} />
     }
 
   }
@@ -126,7 +133,7 @@ function App() {
               </h2> 
 
             <p className="muted">{navDescriptions[activeNavItem]}</p>
-            <p className="muted">October 2026</p>
+            <p className="muted">Most recent transaction imported: {mostRecent}</p>
           </div>
           <div className="top-actions">
 
