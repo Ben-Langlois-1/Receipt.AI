@@ -3,7 +3,11 @@ import { Card, Button, StatusBadge } from '../components.tsx'
 import type { LedgerTransaction } from '../finance/types.ts'
 
 // importing JavScript
-import { totalAmount, SpendingIncome } from '../JavaScript/calculations.js'
+import { totalAmount, SpendingIncome, totalTransactions } from '../JavaScript/calculations.js'
+
+import { currentMonth} from '../JavaScript/calculations.js'
+import { curMonth, curYear } from '../JavaScript/calculations.js'
+import { currentMonthSpendingIncome } from '../JavaScript/calculations.js'
 
 type TransactionsPageProps = {
     transactions: LedgerTransaction[]
@@ -13,25 +17,25 @@ type TransactionsPageProps = {
 export default function OverviewPage({ transactions }: TransactionsPageProps) {
 
     const net = totalAmount(transactions)
-
     const { spendingTotal, incomeTotal } = SpendingIncome(transactions)
+    const { monthlySpending, monthlyIncome }= currentMonthSpendingIncome(currentMonth(transactions))
 
   return ( <>
 
-        <h2>Monthly Summary</h2>
+        <h2>Monthly Summary - {curMonth}, {curYear}</h2>
 
     <section className="kpi-grid" aria-label="Key finance metrics">
         <Card title="Spending">
-            <p className="metric">$2,184</p>
+            <p className="metric">${Math.abs(monthlySpending).toFixed(2)}</p>
         </Card>
         <Card title="Income">
-            <p className="metric">$4,850</p>
+            <p className="metric">${monthlyIncome.toFixed(2)}</p>
         </Card>
         <Card title="Net cash flow">
-            <p className="metric">$2,932</p>
+            <p className="metric">---</p>
         </Card>
         <Card title="Remaining budget">
-            <p className="metric">$1,168</p>
+            <p className="metric">---</p>
         </Card>
     </section>
 
@@ -47,6 +51,10 @@ export default function OverviewPage({ transactions }: TransactionsPageProps) {
 
         <Card title="Total income">
             <p className="metric">${incomeTotal.toFixed(2)}</p>
+        </Card>
+
+        <Card title="Total transactions">
+            <p className="metric">{totalTransactions(transactions)}</p>
         </Card>
     </section>
 

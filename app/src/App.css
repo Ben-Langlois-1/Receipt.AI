@@ -308,3 +308,10 @@ button:focus-visible {
   display: flex;
   gap: 8px;
 }
+
+/* MORE CUSTOM ITEMS */
+
+.monthly-header {
+  display: flex;
+  align-items: center;
+}
