@@ -144,7 +144,6 @@ function App() {
             // click on button refers to the hidden input element
               onClick={() => {
                 fileInputRef.current?.click()
-                console.log('Import CSV button clicked, opening file dialog...')
               }}>
 
                 Import CSV
