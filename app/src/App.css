@@ -126,10 +126,14 @@
 
 .bar-row {
   display: grid;
-  grid-template-columns: 92px 1fr;
+  grid-template-columns: minmax(120px, 35%) minmax(0, 1fr);
   align-items: center;
   gap: 8px;
   margin-bottom: 8px;
+}
+
+.bar-row > span {
+  overflow-wrap: anywhere;
 }
 
 .bar {
@@ -314,4 +318,41 @@ button:focus-visible {
 .monthly-header {
   display: flex;
   align-items: center;
+}
+
+/* LINE CHART */
+
+.trend-chart {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.trend-chart text {
+  fill: var(--text-muted);
+  font-size: 12px;
+}
+
+.trend-grid {
+  stroke: var(--border-default);
+  stroke-dasharray: 4 4;
+}
+
+.trend-spending,
+.trend-income {
+  fill: none;
+  stroke-width: 3;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.trend-spending,
+.trend-spending-point {
+  stroke: #fc5656;
+}
+
+.trend-income,
+.trend-income-point {
+  stroke: #81f09f;
 }

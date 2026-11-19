@@ -158,3 +158,17 @@ export function currentMonthSpendingIncome(lastMonthArr) {
     return { monthlySpending, monthlyIncome }
 
 }
+
+export function currentMonthNet(lastMonthArr) {
+    let curMonthNet = 0
+
+    for (let i = 0; i < lastMonthArr.length; i++) {
+        curMonthNet = curMonthNet + lastMonthArr[i].amount
+    }
+
+    return curMonthNet
+
+}
+
+// Line graph
+
