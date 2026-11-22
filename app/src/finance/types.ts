@@ -33,6 +33,23 @@ export interface LedgerTransaction {
   external_id: string
 }
 
+export interface Budget { // creates budget type 
+  month: string // "YYYY-MM"
+  category: string
+  limitCents: number
+}
+
+export type RecurrenceFrequency = 'weekly' | 'monthly' | 'yearly'
+
+export interface RecurringExpense {
+  sourceTransactionId: string
+  description: string
+  category: string
+  amountCents: number
+  frequency: RecurrenceFrequency
+  startDate: string
+}
+
 export interface ImportIssue {
   row: number | null
   severity: 'error' | 'warning'

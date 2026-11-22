@@ -1,5 +1,6 @@
 import { Card } from '../components.tsx'
 import type { LedgerTransaction } from '../finance/types.ts'
+import { formatUsd } from '../finance/money.ts'
 
 type TransactionsPageProps = {
     transactions: LedgerTransaction[]
@@ -35,7 +36,7 @@ export default function TransactionsPage({ transactions }: TransactionsPageProps
                         <tr key={transaction.external_id}>
                             <td>{transaction.date}</td>
                             <td>{transaction.description}</td>
-                            <td>{transaction.amount.toFixed(2)} {transaction.currency}</td>
+                            <td>{formatUsd(transaction.amount)} {transaction.currency}</td>
                             <td>{transaction.category}</td>
                         </tr>
                     ))

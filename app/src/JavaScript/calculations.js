@@ -170,5 +170,35 @@ export function currentMonthNet(lastMonthArr) {
 
 }
 
-// Line graph
+// ====================== Remaining Budget for Overview Page =====================
+
+/**
+ * @param {import('../finance/types.ts').Budget[]} budgets
+ * @param {import('../finance/types.ts').LedgerTransaction[]} transactions
+ * @param {string} month Month in YYYY-MM format
+ * @returns {number} Total remaining budget in cents
+ */
+export function remainingBudgetCents(budgets, transactions, month) {
+    let remainingCents = 0
+
+    for (const budget of budgets) {
+        if (budget.month !== month) continue
+
+        let spentCents = 0
+
+        for (const transaction of transactions) {
+            if (
+                transaction.date.slice(0, 7) === month &&
+                transaction.category === budget.category &&
+                transaction.direction === 'outflow'
+            ) {
+                spentCents += Math.abs(Math.round(transaction.amount * 100))
+            }
+        }
+
+        remainingCents += budget.limitCents - spentCents
+    }
+
+    return remainingCents
+}
 
