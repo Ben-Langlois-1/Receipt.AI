@@ -308,7 +308,7 @@ button:focus-visible {
   margin-top: 0;
 }
 
-.confirm-buttons {
+.space-buttons {
   display: flex;
   gap: 8px;
 }

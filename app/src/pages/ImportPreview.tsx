@@ -57,7 +57,7 @@ export default function ImportPreview ({ filename, importResult, onClose, onConf
                 ))}
             </ul>)}
 
-            <div className="confirm-buttons">
+            <div className="space-buttons">
 
                 <Button variant="primary" onClick={onConfirm}>Confirm Import</Button>
                 <Button variant="secondary" onClick={onClose}>Close</Button>

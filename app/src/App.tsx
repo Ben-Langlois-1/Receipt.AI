@@ -11,6 +11,20 @@ import { mergeLedger } from './finance/ledger.ts' // imports the mergeLedger fun
 import { loadLocalLedger, saveLocalLedger } from './finance/local-ledger.ts' // imports functions to load and save the ledger data from/to local storage
 import type { LedgerTransaction } from './finance/types.ts' // imports the type definition for a ledger transaction
 
+// importing Budgets
+import type { Budget, RecurringExpense } from './finance/types.ts'
+import { loadLocalBudgets, saveLocalBudgets } from './finance/local-budgets.ts'
+import {
+  loadLocalRecurringExpenses,
+  saveLocalRecurringExpenses,
+} from './finance/local-recurring-expenses.ts'
+import {
+  getUpcomingRecurringExpenses,
+  localDateKey,
+} from './finance/recurring.ts'
+import { formatUsd } from './finance/money.ts'
+
+
 // importing pages
 import OverviewPage from './pages/OverviewPage'
 import TransactionsPage from './pages/TransactionsPage'
@@ -23,8 +37,6 @@ import ImportPreview from './pages/ImportPreview.tsx' // imports the ImportPrevi
 
 
 import { recentTransaction } from './JavaScript/calculations.js'
-
-
 
 // importing components
 import { Card, Button} from './components.tsx'
@@ -65,6 +77,25 @@ function App() {
   // =============================== DATA STORAGE (ledger) ===============================
 
   const [ledger, setLedger] = useState<LedgerTransaction[]>(() => loadLocalLedger()) // State to hold the current ledger data, initialized with data loaded from local storage
+  const [budgets, setBudgets] = useState<Budget[]>(() => loadLocalBudgets())
+  const [recurringExpenses, setRecurringExpenses] = useState<RecurringExpense[]>(
+    () => loadLocalRecurringExpenses(),
+  )
+
+  function handleBudgetsChange(nextBudgets: Budget[]) {
+    saveLocalBudgets(nextBudgets)
+    setBudgets(nextBudgets)
+  }
+
+  function handleRecurringExpensesChange(nextExpenses: RecurringExpense[]) {
+    saveLocalRecurringExpenses(nextExpenses)
+    setRecurringExpenses(nextExpenses)
+  }
+
+  const upcomingRecurringExpenses = getUpcomingRecurringExpenses(
+    recurringExpenses,
+    localDateKey(),
+  )
 
   const mostRecent = recentTransaction(ledger)
 
@@ -87,10 +118,16 @@ function App() {
         return <TransactionsPage transactions={ledger} />
 
       case 'Budgets': // =================== START OF BUDGETS PAGE ===================
-        return <BudgetsPage/>
+        return <BudgetsPage budgets={budgets} onBudgetsChange={handleBudgetsChange} transactions={ledger}/>
       
       case 'Recurring Expenses': // =================== START OF RECURRING EXPENSES PAGE ===================
-        return <RecurringExpensesPage/>
+        return (
+          <RecurringExpensesPage
+            transactions={ledger}
+            recurringExpenses={recurringExpenses}
+            onRecurringExpensesChange={handleRecurringExpensesChange}
+          />
+        )
 
       case 'AI Advisor': // =================== START OF AI ADVISOR PAGE ===================
         return <AIAdvisorPage/>
@@ -100,7 +137,7 @@ function App() {
 
       case 'Overview': // =================== START OF OVERVIEW PAGE =================== default view when the app is first loaded
       default:
-        return <OverviewPage transactions={ledger} />
+        return <OverviewPage transactions={ledger} budgets={budgets}/>
     }
 
   }
@@ -210,9 +247,26 @@ function App() {
       <aside className="details-panel">
         <h3>Details</h3>
         <p className="muted">Select a transaction or recommendation to see context and explanations.</p>
-        <Card title="Upcoming recurring expense">
-          <p>CloudPlay</p>
-          <p className="muted">$9.99 monthly · next expected 2026-10-20</p>
+        <Card title="Recurring expenses in the next 7 days">
+          {upcomingRecurringExpenses.length === 0 ? (
+            <p className="muted">None expected in the next 7 days.</p>
+          ) : (
+            <ul>
+              {upcomingRecurringExpenses.map((expense) => (
+                <li key={expense.sourceTransactionId}>
+                  <strong>{expense.description}</strong>
+                  <p>
+                    {formatUsd(expense.amountCents / 100)} · {expense.frequency} ·{' '}
+                    {new Intl.DateTimeFormat('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                      timeZone: 'UTC',
+                    }).format(new Date(`${expense.nextDate}T00:00:00Z`))}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          )}
         </Card>
       </aside>
     </div>

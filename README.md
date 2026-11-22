@@ -157,10 +157,11 @@ Category colors should be fixed and reused across charts/tables/chips for trust 
   - Explicit “Approve” / “Edit” / “Dismiss” controls.
 
 ### Recurring Expenses
-- Auto-detected recurring groups by merchant/subscription.
-- Columns: Merchant, Avg Amount, Frequency, Next Date, Confidence.
-- State actions: Confirm / Edit / Dismiss.
-- Highlights for unusual amount or date drift.
+- Let the user select an existing expense transaction and set a weekly, monthly, or yearly schedule.
+- Show the amount, category, frequency, and next expected date for each schedule.
+- Allow the user to remove a recurring schedule.
+- Show schedules expected within the next seven days in the Overview sidebar.
+- Keep schedules as forecasts; do not automatically add projected transactions to the ledger.
 
 ### AI Advisor
 - Chat layout with prompt suggestions:
@@ -197,7 +198,7 @@ Category colors should be fixed and reused across charts/tables/chips for trust 
 - **Uncategorized transactions:** dedicated filter and review queue badge.
 - **Missing/unavailable AI model:** clear warning with setup steps; app remains usable.
 - **AI processing in progress:** non-blocking spinner/skeleton and “analysis running” text.
-- **No recurring expenses found:** informative empty state with detection criteria.
+- **No recurring expenses set up:** prompt the user to choose an existing expense transaction.
 - **Budget exceeded:** warning card + suggested actions (reallocate, edit budget).
 - **No data for chart:** placeholder text with selected timeframe context.
 

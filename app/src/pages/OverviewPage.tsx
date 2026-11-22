@@ -1,6 +1,6 @@
 import { Card, Button } from '../components.tsx'
 
-import type { LedgerTransaction } from '../finance/types.ts'
+import type { LedgerTransaction, Budget } from '../finance/types.ts'
 
 // importing JavScript
 import { totalAmount, SpendingIncome, totalTransactions } from '../JavaScript/calculations.js'
@@ -9,14 +9,19 @@ import { currentMonth} from '../JavaScript/calculations.js'
 import { curMonth, curYear } from '../JavaScript/calculations.js'
 import { currentMonthSpendingIncome, currentMonthNet } from '../JavaScript/calculations.js'
 
+import { remainingBudgetCents } from '../JavaScript/calculations.js'
+
 import { summarize } from '../finance/summary.ts'
+
+import { formatUsd } from '../finance/money.ts'
 
 type TransactionsPageProps = {
     transactions: LedgerTransaction[]
+    budgets: Budget[]
 }
 
 
-export default function OverviewPage({ transactions }: TransactionsPageProps) {
+export default function OverviewPage({ transactions, budgets }: TransactionsPageProps) {
 
     const monthlyTransactions = currentMonth(transactions)
 
@@ -34,6 +39,7 @@ export default function OverviewPage({ transactions }: TransactionsPageProps) {
 // Line graph
 
     const monthlyTrend = summarize(transactions).byMonth //grabs one value per month
+    console.table(monthlyTrend)
 
     const chartWidth = 600 // determines the dimensions
     const chartHeight = 260
@@ -79,37 +85,49 @@ export default function OverviewPage({ transactions }: TransactionsPageProps) {
         timeZone: 'UTC',
     })
 
+    // ================= Budgets =================
+
+    const today = new Date()
+    const currentMonthKey =
+    `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`
+
+    const remainingCents = remainingBudgetCents(
+    budgets,
+    transactions,
+    currentMonthKey,
+    )
+
   return ( <>
 
         <h2>Monthly Summary - {curMonth}, {curYear}</h2>
 
     <section className="kpi-grid" aria-label="Key finance metrics">
         <Card title="Spending">
-            <p className="metric">${Math.abs(monthlySpending).toFixed(2)}</p>
+            <p className="metric">{formatUsd(Math.abs(monthlySpending))}</p>
         </Card>
         <Card title="Income">
-            <p className="metric">${monthlyIncome.toFixed(2)}</p>
+            <p className="metric">{formatUsd(monthlyIncome)}</p>
         </Card>
         <Card title="Net cash flow">
-            <p className="metric">${curMonthNet.toFixed(2)}</p>
+            <p className="metric">{formatUsd(curMonthNet)}</p>
         </Card>
         <Card title="Remaining budget">
-            <p className="metric">---</p>
+            <p className="metric">{formatUsd(remainingCents / 100)}</p>
         </Card>
     </section>
 
         <h2>All-Time Activity</h2>
     <section className="kpi-grid" aria-label="Key finance metrics">
         <Card title="Net value">
-            <p className="metric">${net.toFixed(2)}</p>
+            <p className="metric">{formatUsd(net)}</p>
         </Card>
 
         <Card title="Total spending">
-            <p className="metric">${Math.abs(spendingTotal).toFixed(2)}</p>
+            <p className="metric">{formatUsd(Math.abs(spendingTotal))}</p>
         </Card>
 
         <Card title="Total income">
-            <p className="metric">${incomeTotal.toFixed(2)}</p>
+            <p className="metric">{formatUsd(incomeTotal)}</p>
         </Card>
 
         <Card title="Total transactions">
@@ -216,19 +234,19 @@ export default function OverviewPage({ transactions }: TransactionsPageProps) {
                 <tr>
                     <td>{transactions[transactions.length -1]?.date}</td>
                     <td>{transactions[transactions.length -1]?.description}</td>
-                    <td>{transactions[transactions.length -1]?.amount}</td>
+                    <td>{formatUsd(transactions[transactions.length -1]?.amount)}</td>
                     <td>{transactions[transactions.length -1]?.category}</td>
                 </tr>
                 <tr>
                     <td>{transactions[transactions.length -2]?.date}</td>
                     <td>{transactions[transactions.length -2]?.description}</td>
-                    <td>{transactions[transactions.length -2]?.amount}</td>
+                    <td>{formatUsd(transactions[transactions.length -2]?.amount)}</td>
                     <td>{transactions[transactions.length -2]?.category}</td>
                 </tr>
                 <tr>
                     <td>{transactions[transactions.length -3]?.date}</td>
                     <td>{transactions[transactions.length -3]?.description}</td>
-                    <td>{transactions[transactions.length -3]?.amount}</td>
+                    <td>{formatUsd(transactions[transactions.length -3]?.amount)}</td>
                     <td>{transactions[transactions.length -3]?.category}</td>
                 </tr>
             </tbody>
