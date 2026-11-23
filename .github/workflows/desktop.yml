@@ -2,6 +2,10 @@ name: Desktop native build and packaged tests
 on:
   push:
     branches: [feature/local-ai-integration]
+    paths:
+      - 'app/**'
+      - '.github/workflows/desktop.yml'
+      - '.gitattributes'
   workflow_dispatch:
     inputs:
       model_url:
