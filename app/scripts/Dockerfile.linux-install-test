@@ -1,0 +1,4 @@
+FROM registry.fedoraproject.org/fedora:44
+# Node and Playwright are test-harness tooling, never installer requirements.
+RUN dnf install -y gtk3 nss libXScrnSaver libXtst libnotify at-spi2-core libdrm mesa-libgbm alsa-lib xorg-x11-server-Xvfb nodejs util-linux iproute procps-ng tar gzip && dnf clean all
+RUN useradd --create-home --uid 1000 receipt-test

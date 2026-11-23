@@ -1,0 +1,14 @@
+{
+  "defaultModel": "Qwen3-1.7B-Q4_K_M.gguf",
+  "alternativeModel": "Qwen3-4B-Q4_K_M.gguf",
+  "quantization": "Q4_K_M",
+  "runtime": "llama.cpp b5756, CPU-only",
+  "contextTokens": 4096,
+  "thinkingDisabled": true,
+  "recommendationScope": "Receipt.AI current constrained qualitative-advice pipeline on approximately 8 GB CPU-only computers; not a universal ranking of the models.",
+  "rationale": "Similar routine advice, lower latency/RSS and fewer first-pass rejections. 4B delivers more final explanations but includes accepted transport-constraint violations and no clear routine-advice improvement.",
+  "configurability": "No model ID is hardcoded into production: load another GGUF in llama-server; adapter auto-discovers the loaded model or accepts options.model.",
+  "full8GBMachineValidated": false,
+  "capped8GiBWorkloadCompletedForBoth": true,
+  "results": "../artifacts/phase4/summary.json"
+}

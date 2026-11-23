@@ -39,7 +39,6 @@ export default function OverviewPage({ transactions, budgets }: TransactionsPage
 // Line graph
 
     const monthlyTrend = summarize(transactions).byMonth //grabs one value per month
-    console.table(monthlyTrend)
 
     const chartWidth = 600 // determines the dimensions
     const chartHeight = 260
@@ -118,7 +117,7 @@ export default function OverviewPage({ transactions, budgets }: TransactionsPage
 
         <h2>All-Time Activity</h2>
     <section className="kpi-grid" aria-label="Key finance metrics">
-        <Card title="Net value">
+        <Card title="Net transaction flow">
             <p className="metric">{formatUsd(net)}</p>
         </Card>
 
@@ -255,10 +254,10 @@ export default function OverviewPage({ transactions, budgets }: TransactionsPage
 
         <Card title="AI summary">
             <p>
-            Dining spending increased by <strong>18%</strong> this month compared with last month.
+            Open AI Advisor for figures calculated from your imported records.
             </p>
             <p className="muted">
-            Why am I seeing this? 6 transactions across 3 merchants in the past 30 days.
+            No generated insight is available on this dashboard.
             </p>
             <div className="card-actions">
             <Button variant="tertiary">Why this recommendation?</Button>

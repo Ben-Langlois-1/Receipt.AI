@@ -1,3 +1,4 @@
+import { DesktopAiStatus } from './ai/DesktopAiStatus.tsx'
 import './App.css'
 import { useRef, useState } from 'react' // React state helpers and types, changed from 'import React, { useState } from 'react'' to avoid importing the entire React namespace
 
@@ -130,7 +131,7 @@ function App() {
         )
 
       case 'AI Advisor': // =================== START OF AI ADVISOR PAGE ===================
-        return <AIAdvisorPage/>
+        return <AIAdvisorPage transactions={ledger} />
 
       case 'Settings & Privacy': // =================== START OF SETTINGS & PRIVACY PAGE ===================
         return <SettingsandPrivacyPage/>
@@ -196,7 +197,7 @@ function App() {
 
                 try {
                   const text = await file.text()
-                  console.log(`Read ${file.name}: ${text.length} characters`)
+
 
                   const transactionsResult = importStatement(text) // sends the text of the CSV file to the importStatement function for processing
                     //transactionResult returns the object containing sucess/fail status, profile label, transaction count, and issues
@@ -205,16 +206,10 @@ function App() {
                   setPendingFileName(file.name) // updates PendingFileName with the name of the file being imported
                     // "pending" means it has been processed but not yet reviewed, so is only stored in memory
 
-                  console.log({
-                    fileName: file.name,
-                    success: transactionsResult.ok,
-                    format: transactionsResult.profileLabel,
-                    transactionCount: transactionsResult.transactions.length,
-                    issues: transactionsResult.issues,
-                  })
 
-                } catch (error) {
-                  console.error('Error reading file:', error)
+
+                } catch {
+                  console.error('Unable to read the selected CSV file.')
                 }
 
             }} />
@@ -238,6 +233,7 @@ function App() {
         </main>
 
         <footer className="status-strip">
+          <DesktopAiStatus />
           <span>Your financial data stays on this device.</span>
           <span>AI analysis is processed locally.</span>
           <span>No transaction data is uploaded.</span>

@@ -10,8 +10,6 @@ type TransactionsPageProps = {
 
 export default function TransactionsPage({ transactions }: TransactionsPageProps) {
 
-    const totalAmount = transactions.reduce((sum, transaction) => sum + transaction.amount, 0) // calculates the total amount of all transactions
-    console.log('Total Amount:', totalAmount) // logs the total amount to the console for debugging purposes
 
   return (<>
 

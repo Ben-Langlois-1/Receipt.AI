@@ -1,0 +1,33 @@
+Receipt.AI classroom release candidate: native runtime source materials
+
+The Linux runtime includes unmodified Ubuntu libgcc-s1 and libstdc++6 binaries
+12.3.0-1ubuntu1~22.04.3 (source package gcc-12 of that exact version).
+The companion release file sources/Receipt.AI-linux-runtime-sources.tar contains
+the complete source package archives and Debian/Ubuntu patches (.dsc, original
+tar archive and .diff.gz), plus the pinned llama.cpp source archive and exact
+runtime package versions. Distribute this source archive alongside the Linux
+installers, with equivalent access and the release SHA256SUMS file. A license
+text or an upstream link alone is not a substitute for those source materials.
+
+Source repository: Ubuntu jammy-updates/main, source gcc-12
+Native source: https://github.com/ggml-org/llama.cpp/tree/60ef23d6c14d325d83eae5752e5de39ad268e9b0
+Source retrieval/build: app/scripts/collect-runtime-sources.sh and
+app/scripts/build-linux-container.sh in the Receipt.AI source distribution.
+
+Windows cross-build: GCC runtime objects are linked using the GCC Runtime
+Library Exception; libwinpthread-1.dll uses the notices in
+MinGW-w64-copyright.txt when that cross-build is supplied. The build-only
+thread-API declaration shim and all cross-build flags are in app/scripts.
+Native Windows CI builds use MSVC rather than this optional MinGW path.
+
+Electron/Chromium contain additional components covered by their bundled
+LICENSES.chromium.html (platform-specific, at the application root), Electron
+license, and accompanying notices. React, React DOM and Scheduler MIT texts
+are also bundled. Do not remove third-party notices from public packages.
+
+Qwen3 model license: Apache-2.0, copyright Alibaba Cloud. The approved GGUF's
+license metadata is retained in model-provenance.json. Its exact quantizer
+download origin is still unverified; confirm provenance and an approved
+artifact mirror before public redistribution. No model rights are implied
+beyond the upstream license. Receipt.AI's own package remains UNLICENSED;
+the team must approve application distribution/licensing terms separately.

@@ -1,0 +1,3 @@
+# Canonical CSV serialization and executable shell scripts use LF on every host.
+app/fixtures/expected/*.csv text eol=lf
+*.sh text eol=lf
