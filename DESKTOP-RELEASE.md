@@ -1,5 +1,7 @@
 # Receipt.AI — Phase 5 desktop preview
 
+This file records Phase 5. Current release validation, team integration and platform evidence are in [RELEASE-VALIDATION.md](RELEASE-VALIDATION.md).
+
 This is an unsigned architectural-review build, version `1.0.0-preview.1`. The default installer contains Qwen3 1.7B Q4_K_M and a CPU-only llama.cpp runtime. No 4B weights, system Node.js, Python, development server, model download, or separately installed llama.cpp are needed at runtime.
 
 ## Architecture and ownership

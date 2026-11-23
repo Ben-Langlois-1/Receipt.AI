@@ -1,5 +1,7 @@
 # Receipt.AI - AI component starter (Yousif)
 
+This document preserves the earlier AI integration history. For the current desktop candidate and completed validations, see [RELEASE-VALIDATION.md](RELEASE-VALIDATION.md).
+
 This is an **AI integration starter**, not a finished Electron distribution. The existing import/finance logic was left intact.
 
 ## Files changed
