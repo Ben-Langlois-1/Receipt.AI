@@ -13,7 +13,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-      - name: Verify program-scoped enforcement and cleanup
+      - name: Verify per-family program rules and profile restoration
         run: node app/scripts/check-windows-network.cjs
   mac-enforcement:
     runs-on: macos-15
