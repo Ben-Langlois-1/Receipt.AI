@@ -1,6 +1,7 @@
 // Native Windows/macOS installer tests. Linux installation uses a clean container.
 const fs = require('node:fs'), os = require('node:os'), path = require('node:path'), { spawnSync } = require('node:child_process')
 const { verifyPackage } = require('./verify-package.cjs')
+const { macLoopbackPolicy } = require('./release-network-macos.cjs')
 const root = path.resolve(__dirname, '..'), version = require('../package.json').version
 function run(file, args, options = {}) {
   const r = spawnSync(file, args, { stdio: 'inherit', ...options })
@@ -10,7 +11,7 @@ async function main() {
   if (!['win32', 'darwin'].includes(process.platform)) throw Error('Run this test on native Windows or macOS.')
   const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'receiptai-install-')), evidence = path.join(root, 'artifacts/phase6/installed-' + process.platform + '-' + process.arch)
   fs.mkdirSync(evidence, { recursive: true })
-  let executable, directory, mounted = false
+  let executable, directory, mounted = false, networkCleanup
   const group = 'ReceiptAI-Test-' + Date.now(), mount = path.join(temporary, 'volume')
   const firewall = path.join(__dirname, 'release-network-windows.ps1')
   try {
@@ -29,19 +30,17 @@ async function main() {
       directory = path.join(temporary, applications[0])
       run('ditto', [path.join(mount, applications[0]), directory])
       executable = ['receipt-ai', 'Receipt.AI'].map(name => path.join(directory, 'Contents/MacOS', name)).find(file => fs.existsSync(file))
-      // Restrict this app and descendants, not the runner's network interfaces.
-      // Failure of the OS policy or launch fails CI; it is never silently skipped.
-      const policy = path.join(temporary, 'offline.sb'), wrapper = path.join(temporary, 'offline-app')
-      fs.writeFileSync(policy, '(version 1)\n(allow default)\n(deny network*)\n(allow network* (local ip "localhost:*") (remote ip "localhost:*"))\n')
-      const quote = text => "'" + text.replace(/'/g, "'\\''") + "'"
-      fs.writeFileSync(wrapper, `#!/bin/sh\nexec /usr/bin/sandbox-exec -f ${quote(policy)} ${quote(executable)} "$@"\n`, { mode: 0o755 })
-      executable = wrapper
+      networkCleanup = await macLoopbackPolicy(temporary, evidence)
     }
     const inventory = await verifyPackage(directory)
     fs.writeFileSync(path.join(evidence, 'package-inventory.json'), JSON.stringify(inventory, null, 2))
     run(process.execPath, [path.join(root, 'tests/e2e/desktop.cjs')], { cwd: root, env: { ...process.env, DESKTOP_EXECUTABLE: executable, DESKTOP_ARTIFACT_PHASE: 'phase6', DESKTOP_TEST_RUN: 'installed-' + process.platform + '-' + process.arch } })
-    fs.writeFileSync(path.join(evidence, 'installation.json'), JSON.stringify({ status: 'passed', platform: process.platform, arch: process.arch, version, installed: true, offlineFirstLaunch: true, networkMethod: process.platform === 'win32' ? 'Per-program Windows Firewall rules deny all non-loopback addresses' : 'Inherited macOS sandbox-exec policy denies non-loopback networking', unsignedPreview: true }, null, 2))
+    fs.writeFileSync(path.join(evidence, 'installation.json'), JSON.stringify({ status: 'passed', platform: process.platform, arch: process.arch, version, installed: true, offlineFirstLaunch: true, networkMethod: process.platform === 'win32' ? 'Per-program Windows Firewall denies external routable addresses with active profiles' : 'Owned PF anchor blocks new external app/user connections while retaining Chromium sandboxing', unsignedPreview: true }, null, 2))
+  } catch (error) {
+    fs.writeFileSync(path.join(evidence, 'installation-failure.json'), JSON.stringify({ platform: process.platform, arch: process.arch, message: error.message }, null, 2))
+    throw error
   } finally {
+    networkCleanup?.()
     if (process.platform === 'win32') run('powershell.exe', ['-NoProfile', '-NonInteractive', '-File', firewall, '-Mode', 'Disable', '-Directory', directory, '-Group', group])
     if (mounted) run('hdiutil', ['detach', mount])
     // Keep isolated profiles and installed files if a test fails for diagnosis.
