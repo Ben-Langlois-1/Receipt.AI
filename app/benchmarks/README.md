@@ -8,20 +8,17 @@ server on loopback port 8081; the user's server/profile remain untouched.
 
 ## Reproduce
 
-Start Vite on localhost:5173. Install Playwright outside production dependencies
-(e.g. `npm install --prefix /tmp/receiptai-browser playwright`). Use an installed
-Chromium with PLAYWRIGHT_EXECUTABLE, or install the matching Playwright browser.
-From the repository root:
+This is an opt-in developer evaluation, not application setup or a CI job started by a push. Start Vite on localhost:5173 with `npm run dev` from `app/`. Playwright is already a development dependency; install its matching Chromium using `npx playwright install chromium` from `app/` if needed. Configure local llama.cpp and both approved GGUF paths. From the repository root:
 
 ```sh
-systemd-run --user --wait --pipe --unit=receiptai-phase4-benchmark \
-  --working-directory="$PWD" --property=MemoryMax=8G --property=MemorySwapMax=0 \
-  --setenv=PLAYWRIGHT_MODULE=/tmp/receiptai-browser/node_modules/playwright \
-  --setenv=PLAYWRIGHT_EXECUTABLE=/home/ymehsen/.cache/ms-playwright/chromium_headless_shell-1234/chrome-headless-shell-linux64/chrome-headless-shell \
-  --setenv=BENCHMARK_OUT="$PWD/app/artifacts/phase4-new-run" \
-  /usr/bin/node app/benchmarks/run.cjs
-node app/benchmarks/score.cjs app/artifacts/phase4-new-run
+LLAMA_SERVER="$HOME/llama.cpp/build/bin/llama-server" \
+MODEL_DIR="$HOME/Models/ReceiptAI" \
+BENCHMARK_OUT="$PWD/app/artifacts/model-evaluation" \
+node app/benchmarks/run.cjs
+node app/benchmarks/score.cjs app/artifacts/model-evaluation
 ```
+
+For a bounded Linux workload, use a disposable cgroup (for example a user `systemd-run` unit with `MemoryMax=8G` and `MemorySwapMax=0`) around the runner. Record the effective memory limit and hardware; an uncapped reproduction must not claim to reproduce the historical memory cap. An installed alternative Chromium may be selected with `PLAYWRIGHT_EXECUTABLE`; `PLAYWRIGHT_MODULE` is optional when using the checked-in development dependency.
 
 Use a fresh output directory; JSONL is append-only to preserve failures. The
 runner refuses to replace a server already using its port. Configure LLAMA_SERVER,
@@ -77,7 +74,7 @@ not independent human/user evaluation. Safety/constraints outrank aggregate scor
 latency, memory and model size break ties where usefulness is similar. Prefer 1.7B
 unless 4B improves actual question fit/reliability enough to justify resource cost.
 
-The completed selection and measured results are in [COMPARISON.md](COMPARISON.md).
+The historical selection and measured results are in [COMPARISON.md](COMPARISON.md).
 Use `node app/benchmarks/review-bundle.cjs <output-directory>` to group identical
 real outputs for manual review. After adding/reviewing `reviews.json` and
 `raw-reviews.json`, rerun the scorer. Scoring includes every trial, preserves
@@ -85,3 +82,5 @@ failed generations, and reports load errors/missing-trial counts. Numeric audit
 flags require review: quoting a requested amount to deny a guarantee is not an
 invented amount. Some multi-line constraint issues require reviewed interpretation;
 manual notes, not app acceptance, determine the final safety assessment.
+
+For the current desktop model configuration and corrected behavior, see the [architecture](../../docs/architecture/local-ai.md) and [release report](../../docs/release/validation.md). Raw output paths described here are ignored generated files, not downloadable Git fixtures.

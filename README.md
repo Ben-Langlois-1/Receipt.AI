@@ -1,305 +1,59 @@
 # Receipt.AI
 
-## Basic Application UI Foundation
+Receipt.AI is a university software engineering project for private desktop financial analysis. Import bank CSV files, review transactions and spending summaries, manage category budgets and recurring schedules, and ask AI Advisor for suggestions grounded in your imported records.
 
-This document defines an initial, production-oriented UI concept for Receipt.AI (desktop app for Windows, macOS, Linux) with a focus on clarity, privacy, explainability, and user control.
+## Local AI and privacy
 
----
+The React/TypeScript interface runs inside Electron. Financial totals, date interpretation, category comparisons and percentages are calculated deterministically in TypeScript. Qwen3 explains the verified facts and suggests qualitative actions; its text is screened before display. Verified figures stay visible separately, including reporting periods and missing-data limitations.
 
-## 1) Proposed Information Architecture
+The desktop candidate bundles **Qwen3 1.7B Q4_K_M** and a CPU-only **llama.cpp** runtime. Electron manages an authenticated loopback connection and stops its owned inference process when the application closes. Financial data and inference stay on the computer; no external AI service or separate model download is required. Imported data persists in the local desktop profile. Files are not application-encrypted, and a browser development profile is separate from the desktop profile.
 
-### Global Navigation
-- **Overview**
-- **Transactions**
-- **Budgets**
-- **Recurring Expenses**
-- **AI Advisor**
-- **Settings & Privacy**
+## Quick Start
 
-### Supporting Structures
-- **Global search** (transactions, merchants, categories)
-- **Context panel** (details/explanations for selected item)
-- **Status rail** (privacy + local model health)
+The current classroom candidate is **1.0.0-rc.2**. Obtain the tested Linux package from the project team. Installers and model weights are not committed to Git, and this README does not advertise a public download release.
 
-### Data Ownership Model (UI-facing)
-- **Imported data** (raw records from CSV/imports)
-- **AI suggestions** (not applied automatically)
-- **User-approved changes** (final source of truth)
+On **Fedora Linux x64**:
 
----
+1. Double-click the supplied `.rpm`, choose **Install**, then open **Receipt.AI** from the applications menu. The preview is unsigned.
+2. Alternatively, allow the supplied `.AppImage` to run as a program in its file properties, then double-click it. A compatible Linux desktop with GTK/X11 libraries is required; AppImage also normally needs FUSE support.
+3. Wait for the local AI status to become ready. No Node.js, terminal, separate server, or internet connection is needed to use the packaged application.
 
-## 2) Desktop Main Window Layout
+Choose **Import CSV**, select a bank export, review the preview, and confirm the import. Open **AI Advisor** and try “What should I do to improve my spending habits?” Missing records are reported as unknown; transaction inflows do not establish income, and net cash flow does not establish an account balance.
 
-### Shell
-- **Left sidebar (fixed)**  
-  App name, primary navigation, unread attention badges (e.g., uncategorized count), settings entry.
-- **Top bar (contextual)**  
-  Page title, date range control, quick actions (Import CSV, Add Budget), global search.
-- **Main content area (responsive cards/table regions)**  
-  Primary view content.
-- **Right details panel (collapsible)**  
-  Explanations (“why categorized this way”), AI rationale, selected item details.
-- **Footer/status strip (subtle)**  
-  “Local only” privacy indicator, model availability, last sync/import timestamp.
+See [installation and first-use instructions](docs/installation.md) for platform details, data persistence and preview limitations.
 
-### Responsive Behavior (desktop-first)
-- Large desktop: 3-pane layout (sidebar + content + details).
-- Small laptop: details panel collapses to drawer; cards stack vertically.
+## Platform status
 
----
+| Platform | Evidence for this candidate |
+| --- | --- |
+| Fedora Linux x64 | AppImage and RPM built; real packaged inference, offline first launch, persistence and cleanup tested. RPM installation and upgrade tested in an isolated Fedora environment. |
+| Ubuntu Linux x64 | Native CI AppImage build and offline packaged acceptance passed. |
+| Windows x64 | Native installer built and silent installation completed; packaged runtime/inference verification remains incomplete. |
+| macOS Apple Silicon / Intel | Native DMG/ZIP packages built and DMG applications copied; packaged runtime/inference verification remains incomplete. |
 
-## 3) Visual Design System
+Windows/macOS work is deferred. These builds do not establish verified runtime support. Packages are unsigned classroom previews, not signed/notarized public releases. Approximately 8 GB RAM is a target supported by constrained Linux testing, not a verified physical minimum specification. See the [release validation report](docs/release/validation.md) for evidence, checksums and remaining distribution requirements.
 
-### Colors
-- **Light background:** `#F6F8FA`
-- **Dark background:** `#0F1720`
-- **Surface cards:** `#FFFFFF` / `#18222D`
-- **Primary accent (calm blue):** `#3A7DCE`
-- **Secondary accent (teal):** `#2F9E97`
-- **Positive (under budget):** `#2E8B57`
-- **Warning (near/exceeded):** `#D18A00`
-- **Critical (sparingly):** `#C44536`
-- **Text primary:** `#1B1F24` / `#E6EDF3`
-- **Text secondary:** `#59636E` / `#9BA7B3`
+## Development
 
-Category colors should be fixed and reused across charts/tables/chips for trust and recognition.
+With Node.js 22+ and npm, from the repository root:
 
-### Typography
-- Font stack: `Inter, Segoe UI, Roboto, system-ui, sans-serif`
-- Scale:
-  - Display: 28/34
-  - H1: 24/30
-  - H2: 20/26
-  - H3: 16/22
-  - Body: 14/20
-  - Caption: 12/16
+```sh
+cd app
+npm ci
+npm test
+node --experimental-strip-types --test tests/*.test.js
+npx tsc -b --pretty false
+npm run lint
+npm run build
+```
 
-### Spacing
-- 4px base scale: `4, 8, 12, 16, 20, 24, 32`
-- Default card padding: `16`
-- Section gaps: `24`
+`npm run dev` starts the browser development UI; its optional local inference setup is described in the [development guide](docs/development/README.md). For desktop builds, native/model staging is required before launching or packaging; use the [desktop build guide](docs/release/desktop-build.md). Both release workflows are manual-only.
 
-### Border Radius
-- Inputs/buttons: `8`
-- Cards/modals: `12`
-- Pill/chips: `999px`
+## Documentation and credits
 
-### Shadows
-- Card resting: `0 1px 2px rgba(16,24,40,0.08)`
-- Card hover/focus: `0 6px 16px rgba(16,24,40,0.12)`
+- [Local AI and desktop architecture](docs/architecture/local-ai.md)
+- [Original team UI design specification](docs/architecture/ui-design.md)
+- [Development and engineering history](docs/development/README.md)
+- [Release build and validation](docs/release/desktop-build.md)
 
-### Icons
-- Simple outline icons (finance + system status).
-- Always pair icon + text label for key actions.
-
-### Charts
-- Prefer readable bar/line/donut with direct legends.
-- Always show labels, units, and time range.
-- Empty/no-data states included in chart container.
-
-### Buttons
-- Variants: Primary, Secondary, Tertiary, Destructive.
-- Primary reserved for one main action per section.
-- Clear focus ring for keyboard users.
-
-### Forms
-- Plain-language labels, helper text, validation under field.
-- Confirm dialogs for irreversible actions.
-- AI-generated values marked as “Suggested”.
-
-### Tables
-- Sticky headers, sortable columns, row selection.
-- Inline editable category cells.
-- Status chips: Imported / Suggested / User Confirmed / Uncategorized.
-
-### Alerts
-- Info, Warning, Critical styles with concise action.
-- Red used only for true risk/over-limit states.
-
-### Empty States
-- Explain what is missing + give next best action button.
-- Avoid blame language.
-
----
-
-## 4) Wireframe-Level Screen Descriptions
-
-### Overview Dashboard
-- Top KPI cards: Current month spend, Income, Expenses, Remaining budget.
-- Mid row:
-  - Spending by category (donut/bar).
-  - Monthly trend (line chart).
-- Bottom row:
-  - Recent transactions table (latest 10).
-  - Upcoming recurring expenses list.
-- AI summary card:
-  - 2–4 bullet insights
-  - “Why am I seeing this?” expandable rationale
-  - Recommended actions (e.g., “Review Dining: +38% vs last month”).
-
-### Transactions
-- Header actions: Import CSV (drag/drop target), bulk edit button.
-- Controls: Search, filters (date/category/status), sort presets.
-- Main table columns: Date, Merchant, Amount, Category, Status.
-- Uncategorized rows highlighted with neutral warning tone.
-- Inline category dropdown per row.
-- Right details panel:
-  - Full transaction metadata
-  - “Why this category?” explanation
-  - Manual override + undo.
-
-### Budgets
-- Budget list/cards by month + category.
-- Progress bars with planned vs actual.
-- Warning badges near/exceeded.
-- AI suggestions module:
-  - Suggested amount + basis (historical spend window)
-  - Explicit “Approve” / “Edit” / “Dismiss” controls.
-
-### Recurring Expenses
-- Let the user select an existing expense transaction and set a weekly, monthly, or yearly schedule.
-- Show the amount, category, frequency, and next expected date for each schedule.
-- Allow the user to remove a recurring schedule.
-- Show schedules expected within the next seven days in the Overview sidebar.
-- Keep schedules as forecasts; do not automatically add projected transactions to the ledger.
-
-### AI Advisor
-- Chat layout with prompt suggestions:
-  - “Where did my spending increase this month?”
-  - “How much did I spend on dining in the last six months?”
-  - “Help me create a grocery budget.”
-  - “Find subscriptions I may no longer use.”
-  - “Can I afford a $300 purchase based on my recent spending?”
-- Every response includes:
-  - Time period used
-  - Categories considered
-  - Totals and assumptions
-  - “Why am I seeing this?”
-- AI can propose actions, never auto-apply.
-
-### Settings & Privacy
-- Local database path + open-folder control.
-- Import/export/backup/restore controls.
-- Local model status (installed/not available/in use).
-- Model selector + inference settings.
-- Theme: Light / Dark / System.
-- Persistent privacy text:
-  - “Your financial data stays on this device.”
-  - “AI analysis is processed locally.”
-  - “No transaction data is uploaded.”
-
----
-
-## 5) Important States and Edge Cases
-
-- **No imported transactions:** onboarding empty state with “Import CSV” CTA.
-- **CSV import in progress:** progress bar, parsed row count, cancel option.
-- **Import errors:** row-level error table, downloadable error report, retry.
-- **Uncategorized transactions:** dedicated filter and review queue badge.
-- **Missing/unavailable AI model:** clear warning with setup steps; app remains usable.
-- **AI processing in progress:** non-blocking spinner/skeleton and “analysis running” text.
-- **No recurring expenses set up:** prompt the user to choose an existing expense transaction.
-- **Budget exceeded:** warning card + suggested actions (reallocate, edit budget).
-- **No data for chart:** placeholder text with selected timeframe context.
-
----
-
-## 6) Recommended React Component Hierarchy
-
-- `AppShell`
-  - `SidebarNav`
-  - `TopBar`
-  - `PrivacyStatusStrip`
-  - `MainContentRouter`
-    - `OverviewPage`
-      - `KpiCardGrid`
-      - `CategorySpendChartCard`
-      - `TrendChartCard`
-      - `RecentTransactionsCard`
-      - `UpcomingRecurringCard`
-      - `AiSummaryCard`
-    - `TransactionsPage`
-      - `ImportDropzone`
-      - `TransactionFilters`
-      - `TransactionTable`
-      - `BulkEditToolbar`
-      - `TransactionDetailsPanel`
-    - `BudgetsPage`
-      - `BudgetSummaryCards`
-      - `BudgetProgressList`
-      - `AiBudgetSuggestionsPanel`
-    - `RecurringPage`
-      - `RecurringDetectionTable`
-      - `RecurringReviewPanel`
-    - `AdvisorPage`
-      - `PromptSuggestionCards`
-      - `AdvisorChatThread`
-      - `AdvisorResponseEvidence`
-    - `SettingsPrivacyPage`
-      - `DatabaseSettingsCard`
-      - `BackupExportCard`
-      - `ModelSettingsCard`
-      - `ThemeSettingsCard`
-      - `PrivacyMessagingCard`
-
----
-
-## 7) Reusable Components to Implement First
-
-1. `Card`
-2. `Button` (all variants)
-3. `Input`, `Select`, `DateRangePicker`
-4. `StatusBadge`
-5. `ProgressBar`
-6. `DataTable` (sorting/filtering/row select)
-7. `EmptyState`
-8. `AlertBanner`
-9. `InsightExplanation` (“Why am I seeing this?”)
-10. `ConfirmationDialog`
-11. `ChartCard` wrapper (consistent title/legend/no-data handling)
-12. `PrivacyPill` and `ModelStatusIndicator`
-
----
-
-## 8) Example Microcopy
-
-### Buttons
-- “Import CSV”
-- “Review Uncategorized”
-- “Apply Suggestion”
-- “Edit Before Applying”
-- “Keep Current Category”
-
-### Empty States
-- “No transactions yet. Import a CSV to start tracking your spending.”
-- “No recurring expenses detected yet. We’ll surface patterns after more data is available.”
-
-### Warnings
-- “You’re close to your Dining budget limit.”
-- “This budget is exceeded by $84. Review recent transactions?”
-
-### Privacy Notices
-- “Your financial data stays on this device.”
-- “AI analysis is processed locally.”
-- “No transaction data is uploaded.”
-
-### AI Response Style
-- “Dining spending increased by 18% in Sep 2026 compared with Aug 2026 ($412 vs $349). This was mainly driven by 6 transactions at three merchants.”
-- “I suggested a grocery budget of $520 based on your last 6 months median spend ($508) plus seasonal variance.”
-
----
-
-## 9) Local SQLite + llama.cpp UX Recommendations
-
-- Treat local storage/model details as **capabilities**, not technical burden:
-  - Show “Ready / Not Ready / Needs Setup” states in plain language.
-- Keep data trust visible:
-  - Persistent local-only privacy indicator in app shell.
-- Maintain explainability:
-  - AI answers always include source period, categories, totals, and rationale.
-- Preserve control:
-  - AI suggestions enter a review queue; user confirmation required before write.
-- Failure tolerant behavior:
-  - If llama.cpp is unavailable, degrade gracefully to non-AI flows without blocking imports, categorization, or budget editing.
-- Backup confidence:
-  - Make export/backup obvious and recoverable from Settings.
+Receipt.AI is a collaborative project by the Receipt.AI university project team. Financial calculations, CSV import, frontend, Budgets, Recurring Expenses, and local AI/desktop integration retain their contributors’ work and Git history. Local AI integration notes credit Yousif; repository contributions remain attributed to their authors. Electron, React, llama.cpp and Qwen3 are third-party components with their respective notices in [app/resources/licenses](app/resources/licenses). The application’s own package remains `UNLICENSED`; third-party licenses do not grant a license for the team’s application.

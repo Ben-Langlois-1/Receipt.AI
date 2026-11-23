@@ -1,4 +1,4 @@
-# Receipt.AI — Phase 6 release validation
+# Receipt.AI release validation
 
 Candidate: **1.0.0-rc.2**. This report distinguishes local proof, native CI results, and public-release prerequisites. Windows/macOS validation is deferred at the user’s request. Linux validation is complete; the matrix below records the evidence available at handoff. No signed public release has been published.
 
@@ -6,7 +6,7 @@ Candidate: **1.0.0-rc.2**. This report distinguishes local proof, native CI resu
 
 The integration is on [`feature/local-ai-integration`](https://github.com/Ben-Langlois-1/Receipt.AI/tree/feature/local-ai-integration) in the existing team repository. It is based on team `main` commit `760a616`, which includes the completed Budget and Recurring Expenses work. Shared React files were three-way merged against the earlier common base. The latest teammate finance/calculation modules, Budget page, Recurring Expenses page, storage schemas and tests were retained. No commit was pushed to `main`, and no repository was created.
 
-The local Phase 5 snapshot was older than team `main`; RC2 includes those teammate contributions rather than replacing them with the old placeholders. The advisor still reads its existing verified transaction facts; this work does not add AI budget-editing or recurring-detection features.
+The earlier local desktop snapshot was older than team `main`; RC2 includes those teammate contributions rather than replacing them with the old placeholders. The advisor still reads its existing verified transaction facts; this work does not add AI budget-editing or recurring-detection features.
 
 ## Corrections made
 
@@ -21,7 +21,7 @@ The local Phase 5 snapshot was older than team `main`; RC2 includes those teamma
 | `app/tests/e2e/desktop.cjs`, `persistence.cjs`, `synthetic-state.cjs`, `release-metrics.cjs`, `scripts/test-rpm-container.sh` | Test real packaged inference, offline launch, cancellation, crash cleanup, complete ledger persistence and actual RPM upgrades. Preserve synthetic manual metadata, budgets and recurring state. Sample full app process-tree memory and enforce an 8 GB/no-swap container limit. |
 | `app/scripts/test-installed.cjs`, `release-network-windows.ps1`, `.github/workflows/desktop.yml` | Install NSIS/DMG packages on native runners, restrict application networking during first launch, discover the actual Mac bundle, retain failed-build evidence, and hash artifacts. Firewall profile changes are limited to disposable GitHub runners and restored. |
 | `app/src/App.tsx`, `App.css`, `pages/OverviewPage.tsx`, other necessary AI wiring | Preserve teammate Budget/Recurring integration, add desktop status, remove sensitive debug output and the fabricated demo AI insight. Existing calculations and currency formatting remain. |
-| `app/package.json`, lockfile, release/build configuration, `CLASSROOM-INSTALLATION.md` | Identify RC2, provide reproducible scripts, and document professor-friendly installation separately from signed public distribution. |
+| `app/package.json`, lockfile, release/build configuration, `docs/installation.md` | Identify RC2, provide reproducible scripts, and document professor-friendly installation separately from signed public distribution. |
 
 ## Proven local Linux results
 
@@ -70,7 +70,7 @@ PSS avoids counting shared pages repeatedly; summed RSS is higher and is not tre
 
 ## Reproduction and native CI
 
-From `app/`, use `npm ci`, the native build/staging scripts, `npm test`, `npm run build`, and `npm run lint`. `npm run package:linux` builds the curated AppImage and RPM. The native workflow uses Windows 2022 x64, macOS 15 Apple Silicon, macOS 15 Intel, and Ubuntu 22.04. It runs only on the feature branch or manual dispatch; it does not publish a release or merge to `main`.
+From `app/`, use `npm ci`, the native build/staging scripts, `npm test`, `npm run build`, and `npm run lint`. `npm run package:linux` builds the curated AppImage and RPM. The native workflow uses Windows 2022 x64, macOS 15 Apple Silicon, macOS 15 Intel, and Ubuntu 22.04. It runs only through manual dispatch; it does not publish a release or merge to `main`.
 
 An unpublished draft release, `receiptai-ci-approved-qwen3-1.7b`, stages the exact user-approved GGUF plus its license/provenance. Its server-reported digest matches `d2387ca2dbfee2ffabce7120d3770dadca0b293052bc2f0e138fdc940d9bc7b5`, size 1,282,439,264 bytes. No financial records or user profiles were uploaded. An isolated model-preparation job has the repository-writer permission needed to read draft releases; native build/inference jobs retain read-only repository permissions. The exact model is cached across OS runners and hash-checked again during staging. An optional approved HTTPS source can replace draft retrieval at build time. Runtime users do not download weights separately.
 
@@ -95,7 +95,7 @@ Windows public distribution needs publisher signing and clean-machine SmartScree
 | macOS Apple Silicon | Yes, native DMG/ZIP | DMG mounted and app copied | Not verified | Deferred; outer sandbox conflict diagnosed, replacement PF control tested separately |
 | macOS Intel | Yes, native DMG/ZIP | DMG mounted and app copied | Not verified | Deferred; packaged inference still requires a completed native rerun |
 
-**Handoff recommendation:** use RC2 as the Linux classroom release candidate. Phase 6 is not complete for a public cross-platform release. Windows/macOS work is deferred; no Windows/macOS runtime compatibility is claimed. Native CI runs have finished and no new native run is scheduled by this documentation handoff. Signed public v1.0 remains gated by native runtime acceptance, credentials, provenance/licensing review and minimum-hardware qualification.
+**Handoff recommendation:** use RC2 as the Linux classroom release candidate. Public cross-platform release validation remains incomplete. Windows/macOS work is deferred; no Windows/macOS runtime compatibility is claimed. Native CI runs have finished and no new native run is scheduled by this documentation handoff. Signed public v1.0 remains gated by native runtime acceptance, credentials, provenance/licensing review and minimum-hardware qualification.
 
 Final local Linux packages are in `app/release/`:
 
@@ -106,4 +106,8 @@ Final local Linux packages are in `app/release/`:
 
 The latest local regression run passed all 153 assertions, with no skips. TypeScript/build passed; lint has the one pre-existing warning described above. Reproducible build/test code is pushed to the feature branch. Large local installers and detailed test artifacts remain in the workspace; they are not committed to Git. Earlier CI installer artifacts have short retention and are not permanent public download links.
 
-Use [CLASSROOM-INSTALLATION.md](CLASSROOM-INSTALLATION.md) for the professor's installation steps. Existing Vite/browser data remains in its original profile; no automatic browser-to-desktop migration or SQLite migration is claimed.
+Use [installation instructions](../installation.md) for the professor's installation steps. Existing Vite/browser data remains in its original profile; no automatic browser-to-desktop migration or SQLite migration is claimed.
+
+Repository documentation was subsequently organized under `docs/`; validation evidence and artifact hashes above describe the tested RC2 packages, not newly rebuilt packages. See the [build guide](desktop-build.md) for reproduction and [project overview](../../README.md) for current entry points.
+
+Documentation-cleanup verification also ran the team's separate JavaScript suite: **11/11 passed**, alongside all 153 TypeScript tests, TypeScript checks and the production build. Both workflows are now manual-only. No application source, test expectations, packaging behavior or financial calculations changed during this organization pass. Lint retains the same pre-existing warning.

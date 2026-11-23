@@ -29,3 +29,4 @@ dist-ssr
 /resources/native/
 /resources/models/*.gguf
 /artifacts/
+/artifacts-package-inventory.json

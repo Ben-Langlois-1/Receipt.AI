@@ -1,6 +1,8 @@
-# Receipt.AI - AI component starter (Yousif)
+# AI integration engineering history (Yousif)
 
-This document preserves the earlier AI integration history. For the current desktop candidate and completed validations, see [RELEASE-VALIDATION.md](RELEASE-VALIDATION.md).
+This is a chronological record of earlier development phases, preserved for architectural decisions and regression context. Statements about starters, placeholders, missing Electron support, earlier test failures and pending verification describe those earlier snapshots and are superseded. Commands here are historical developer experiments, not packaged-application installation instructions. Current instructions are in the [development guide](README.md), [architecture](../architecture/local-ai.md) and [release validation](../release/validation.md).
+
+The desktop now manages bundled inference, displays verified facts separately, screens prose, supports generic category constraints, and has completed Linux packaged validation. Budgets and Recurring Expenses are implemented by the team. The Chase fixture discrepancy has been corrected. Current truncation handling permits the existing single bounded retry; earlier descriptions of no truncation retry are historical.
 
 This is an **AI integration starter**, not a finished Electron distribution. The existing import/finance logic was left intact.
 

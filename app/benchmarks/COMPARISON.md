@@ -1,4 +1,6 @@
-# Receipt.AI v1.0 model selection
+# Model selection — historical evaluation
+
+> This report records the pre-desktop evaluation snapshot. Its constraint, category-headline and Chase-fixture limitations were subsequently corrected; see [current release validation](../../docs/release/validation.md). Measurements were not rerun after those corrections. Raw execution evidence is generated locally and is not committed to Git.
 
 **Recommend Qwen3 1.7B Q4_K_M as the default**, with 4B retained as a configurable
 alternative. This is a selection for the current constrained Receipt.AI pipeline,
@@ -41,7 +43,7 @@ retry, screening and UI rendering. Raw tokens/s excludes prompt processing and
 includes all attempts, even the two useless repetitive/truncated 1.7B outputs.
 Model readiness is cached startup with default warmup, **not cold-disk load time**.
 Per-case seeded variability and latency ranges are in
-[summary.json](../artifacts/phase4/summary.json). Neither deterministic calculations
+`app/artifacts/phase4/summary.json`. Neither deterministic calculations
 nor balance refusals earned model-quality points.
 
 ## Why the smaller default
@@ -122,12 +124,12 @@ No GPU, energy benchmark, or Electron integration was performed.
 
 - [Runner and rubric](README.md), [suite](suite.cjs), [runner](run.cjs),
   [scorer](score.cjs), [review grouping helper](review-bundle.cjs).
-- [Machine summary](../artifacts/phase4/summary.json),
-  [raw trial JSONL](../artifacts/phase4/trials.jsonl),
-  [fixtures](../artifacts/phase4/suite.json),
-  [environment manifest](../artifacts/phase4/manifest.json),
-  [review scores](../artifacts/phase4/reviews.json),
-  [raw review notes](../artifacts/phase4/raw-reviews.json).
+- `app/artifacts/phase4/summary.json`,
+  `app/artifacts/phase4/trials.jsonl`,
+  `app/artifacts/phase4/suite.json`,
+  `app/artifacts/phase4/manifest.json`,
+  `app/artifacts/phase4/reviews.json`,
+  `app/artifacts/phase4/raw-reviews.json`.
 - Screenshots, raw requests/responses, server logs and 500ms memory samples reside
   in the two model subdirectories under `app/artifacts/phase4/`.
 

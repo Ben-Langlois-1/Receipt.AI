@@ -6,4 +6,4 @@ httplib and nlohmann/json notices accompany the native runtime.
 Linux C++/GCC runtime libraries use the GPL family plus GCC Runtime Library Exception.
 Electron and Chromium notices are included. Application source has no new open-source
 license grant implied by this preview. Third-party license grants remain unchanged.
-Corresponding native source and reproducible flags: app/scripts and DESKTOP-RELEASE.md.
+Corresponding native source and reproducible flags: app/scripts and docs/release/desktop-build.md.

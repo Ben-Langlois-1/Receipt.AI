@@ -1,8 +1,5 @@
 name: Release network policy diagnostics
 on:
-  push:
-    branches: [feature/local-ai-integration]
-    paths: ['.github/workflows/release-network-check.yml']
   workflow_dispatch:
 permissions:
   contents: read
