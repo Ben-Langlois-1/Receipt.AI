@@ -3,8 +3,23 @@ $ErrorActionPreference = 'Stop'
 if ($Group -notmatch '^ReceiptAI-Test-[0-9]+$') { throw 'Invalid test firewall group' }
 if ($Mode -eq 'Disable') {
   Get-NetFirewallRule -Group $Group -ErrorAction SilentlyContinue | Remove-NetFirewallRule
+  $stateFile = Join-Path $Directory '..\firewall-state.json'
+  if (Test-Path $stateFile) {
+    foreach ($old in @(Get-Content $stateFile -Raw | ConvertFrom-Json)) {
+      Set-NetFirewallProfile -Name $old.Name -Enabled ([bool]$old.Enabled)
+    }
+  }
   exit 0
 }
+$profiles = @(Get-NetFirewallProfile)
+$disabled = @($profiles | Where-Object { $_.Enabled -ne 'True' })
+if ($disabled.Count -gt 0 -and $env:GITHUB_ACTIONS -ne 'true') {
+  throw 'Offline verification needs active Windows Firewall profiles. Automatic profile changes are restricted to disposable GitHub runners.'
+}
+$profiles | ForEach-Object { @{ Name = $_.Name; Enabled = ($_.Enabled -eq 'True') } } | ConvertTo-Json | Set-Content (Join-Path $Directory '..\firewall-state.json')
+if ($disabled.Count -gt 0) { Set-NetFirewallProfile -Profile Domain,Public,Private -Enabled True }
+if (@(Get-NetFirewallProfile | Where-Object { $_.Enabled -ne 'True' }).Count -gt 0) { throw 'Windows Firewall enforcement is unavailable.' }
+Get-NetFirewallProfile | Select-Object Name,Enabled | ConvertTo-Json | Write-Output
 # Process-specific rules preserve runner connectivity and all loopback traffic.
 $outsideLoopback = @('0.0.0.0-126.255.255.255', '128.0.0.0-255.255.255.255', '::/0')
 foreach ($relative in @('receipt-ai.exe', 'resources\native\win32-x64\llama-server.exe')) {

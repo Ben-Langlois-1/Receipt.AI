@@ -132,6 +132,7 @@ jobs:
         if: runner.os != 'Linux'
         run: node scripts/test-installed.cjs
       - name: Hash final artifacts
+        if: always()
         run: node scripts/write-checksums.cjs
       - name: Save test evidence
         if: always()
@@ -143,6 +144,7 @@ jobs:
             app/artifacts-package-inventory.json
           retention-days: 1
       - name: Save installers (unsigned preview)
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: receipt-ai-${{ matrix.os }}-${{ matrix.arch }}

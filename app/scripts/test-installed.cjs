@@ -23,8 +23,11 @@ async function main() {
       fs.mkdirSync(mount)
       run('hdiutil', ['attach', '-readonly', '-nobrowse', '-noautoopen', '-mountpoint', mount, path.join(root, 'release', `Receipt.AI-${version}-mac-${process.arch}.dmg`)])
       mounted = true
-      directory = path.join(temporary, 'Receipt.AI.app')
-      run('ditto', [path.join(mount, 'Receipt.AI.app'), directory])
+      const applications = fs.readdirSync(mount).filter(name => name.endsWith('.app') && fs.statSync(path.join(mount, name)).isDirectory())
+      if (applications.length !== 1) throw Error('Expected exactly one application bundle in the DMG.')
+      console.log('Installing DMG application:', applications[0])
+      directory = path.join(temporary, applications[0])
+      run('ditto', [path.join(mount, applications[0]), directory])
       executable = ['receipt-ai', 'Receipt.AI'].map(name => path.join(directory, 'Contents/MacOS', name)).find(file => fs.existsSync(file))
       // Restrict this app and descendants, not the runner's network interfaces.
       // Failure of the OS policy or launch fails CI; it is never silently skipped.
