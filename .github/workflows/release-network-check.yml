@@ -1,0 +1,42 @@
+name: Release network policy diagnostics
+on:
+  push:
+    branches: [feature/local-ai-integration]
+    paths: ['.github/workflows/release-network-check.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  windows-prefixes:
+    runs-on: windows-2022
+    steps:
+      - name: Validate address syntax without enabling any rule
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $group = "ReceiptAI-Probe-$PID"
+          $addresses = @('0.0.0.0-126.255.255.255','128.0.0.0-255.255.255.255','::/0','0.0.0.1-126.255.255.255','128.0.0.0-255.255.255.254','0.0.0.0/2','64.0.0.0/3','96.0.0.0/4','112.0.0.0/5','120.0.0.0/6','124.0.0.0/7','126.0.0.0/8','128.0.0.0/1','::/1','8000::/1')
+          try {
+            $results = foreach ($address in $addresses) {
+              try {
+                New-NetFirewallRule -DisplayName "$group-$address" -Group $group -Direction Outbound -Action Block -Enabled False -Program "$env:SystemRoot\System32\cmd.exe" -RemoteAddress $address | Out-Null
+                @{ address = $address; accepted = $true }
+              } catch { @{ address = $address; accepted = $false; reason = $_.Exception.Message } }
+            }
+            $results | ConvertTo-Json
+          } finally { Get-NetFirewallRule -Group $group -ErrorAction SilentlyContinue | Remove-NetFirewallRule }
+  mac-filter:
+    runs-on: macos-15
+    steps:
+      - name: Inspect root anchors and validate a loopback-only connection policy
+        shell: bash
+        run: |
+          sudo pfctl -sr
+          sudo pfctl -sn
+          sudo pfctl -si
+          cat > "$RUNNER_TEMP/receiptai-probe.pf" <<EOF
+          block drop out quick inet proto tcp from any to !127.0.0.0/8 user $(id -u) flags S/SA
+          block drop out quick inet6 proto tcp from any to !::1 user $(id -u) flags S/SA
+          block drop out quick proto udp from any to any user $(id -u)
+          EOF
+          sudo pfctl -n -a com.apple/ReceiptAIProbe -f "$RUNNER_TEMP/receiptai-probe.pf"
