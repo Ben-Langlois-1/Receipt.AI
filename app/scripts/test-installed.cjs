@@ -42,7 +42,7 @@ async function main() {
     run(process.execPath, [path.join(root, 'tests/e2e/desktop.cjs')], { cwd: root, env: { ...process.env, DESKTOP_EXECUTABLE: executable, DESKTOP_ARTIFACT_PHASE: 'phase6', DESKTOP_TEST_RUN: 'installed-' + process.platform + '-' + process.arch } })
     fs.writeFileSync(path.join(evidence, 'installation.json'), JSON.stringify({ status: 'passed', platform: process.platform, arch: process.arch, version, installed: true, offlineFirstLaunch: true, networkMethod: process.platform === 'win32' ? 'Per-program Windows Firewall rules deny all non-loopback addresses' : 'Inherited macOS sandbox-exec policy denies non-loopback networking', unsignedPreview: true }, null, 2))
   } finally {
-    if (process.platform === 'win32') run('powershell.exe', ['-NoProfile', '-NonInteractive', '-File', firewall, '-Mode', 'Disable', '-Group', group])
+    if (process.platform === 'win32') run('powershell.exe', ['-NoProfile', '-NonInteractive', '-File', firewall, '-Mode', 'Disable', '-Directory', directory, '-Group', group])
     if (mounted) run('hdiutil', ['detach', mount])
     // Keep isolated profiles and installed files if a test fails for diagnosis.
   }

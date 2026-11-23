@@ -21,7 +21,9 @@ if ($disabled.Count -gt 0) { Set-NetFirewallProfile -Profile Domain,Public,Priva
 if (@(Get-NetFirewallProfile | Where-Object { $_.Enabled -ne 'True' }).Count -gt 0) { throw 'Windows Firewall enforcement is unavailable.' }
 Get-NetFirewallProfile | Select-Object Name,Enabled | ConvertTo-Json | Write-Output
 # Process-specific rules preserve runner connectivity and all loopback traffic.
-$outsideLoopback = @('0.0.0.0-126.255.255.255', '128.0.0.0-255.255.255.255', '::/0')
+# Windows rejects ::/0. Both /1 halves were validated on the native runner.
+# Inference and inspector connections explicitly use IPv4 loopback.
+$outsideLoopback = @('0.0.0.0-126.255.255.255', '128.0.0.0-255.255.255.255', '::/1', '8000::/1')
 foreach ($relative in @('receipt-ai.exe', 'resources\native\win32-x64\llama-server.exe')) {
   $program = Join-Path $Directory $relative
   if (!(Test-Path $program)) { throw "Installed executable missing: $relative" }
