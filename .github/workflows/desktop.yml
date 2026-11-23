@@ -19,7 +19,14 @@ jobs:
     permissions:
       contents: write
     steps:
+      - uses: actions/cache/restore@v4
+        id: model-cache
+        with:
+          path: approved-model
+          key: receiptai-qwen3-d2387ca2dbfee2ffabce7120d3770dadca0b293052bc2f0e138fdc940d9bc7b5
+          enableCrossOsArchive: true
       - name: Retrieve the approved CI model fixture
+        if: steps.model-cache.outputs.cache-hit != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           MODEL_URL: ${{ inputs.model_url || vars.RECEIPTAI_MODEL_URL }}
@@ -31,12 +38,12 @@ jobs:
             gh release download receiptai-ci-approved-qwen3-1.7b --repo "$GITHUB_REPOSITORY" --pattern Qwen3-1.7B-Q4_K_M.gguf --dir approved-model
           fi
           echo 'd2387ca2dbfee2ffabce7120d3770dadca0b293052bc2f0e138fdc940d9bc7b5  approved-model/Qwen3-1.7B-Q4_K_M.gguf' | sha256sum --check --status
-      - uses: actions/upload-artifact@v4
+      - uses: actions/cache/save@v4
+        if: steps.model-cache.outputs.cache-hit != 'true'
         with:
-          name: approved-model
-          path: approved-model/Qwen3-1.7B-Q4_K_M.gguf
-          compression-level: 0
-          retention-days: 1
+          path: approved-model
+          key: receiptai-qwen3-d2387ca2dbfee2ffabce7120d3770dadca0b293052bc2f0e138fdc940d9bc7b5
+          enableCrossOsArchive: true
   native-package:
     needs: approved-model
     strategy:
@@ -79,10 +86,16 @@ jobs:
       - name: Portable CPU-only Linux native build
         if: runner.os == 'Linux'
         run: bash scripts/build-linux-container.sh
-      - uses: actions/download-artifact@v4
+      - uses: actions/cache/restore@v4
         with:
-          name: approved-model
-          path: app/resources/models
+          path: approved-model
+          key: receiptai-qwen3-d2387ca2dbfee2ffabce7120d3770dadca0b293052bc2f0e138fdc940d9bc7b5
+          enableCrossOsArchive: true
+          fail-on-cache-miss: true
+      - name: Copy exact approved cached model into package resources
+        run: |
+          mkdir -p resources/models
+          cp ../approved-model/Qwen3-1.7B-Q4_K_M.gguf resources/models/
       - name: Stage native libraries and notices
         run: |
           export NATIVE_BIN_DIR="$PWD/build/native/$(node -p process.platform)-${NATIVE_ARCH}/bin"
@@ -128,7 +141,7 @@ jobs:
           path: |
             app/artifacts/phase6/
             app/artifacts-package-inventory.json
-          retention-days: 7
+          retention-days: 1
       - name: Save installers (unsigned preview)
         uses: actions/upload-artifact@v4
         with:
@@ -143,4 +156,4 @@ jobs:
             app/release/artifact-inventory.json
             app/release/sources/*.tar
           compression-level: 0
-          retention-days: 7
+          retention-days: 1
