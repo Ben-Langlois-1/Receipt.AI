@@ -24,17 +24,36 @@ Desktop data remains in the existing `receipt-ai.ledger.v1` localStorage schema 
 
 Packaging does **not** delete, modify, or automatically read browser/Vite profiles. Existing `http://localhost:5173` data belongs to a different origin/profile and does not silently appear in Electron. Keep that profile and original imports/backups; a reviewed migration/export flow is needed if browser-edited categories must be transferred. No such transfer or destructive reset is performed here. Do not change the desktop app ID, origin, profile path, or ledger key in future releases without a migration plan.
 
-SQLite is not required to launch this desktop implementation: the existing UI and advisor share the same ledger. The independent SQLite CLI remains intact. The repository's design document discusses SQLite but does not establish a mandatory migration contract. If the final course specification requires the UI to persist through SQLite, coordinate that separate storage integration with the finance/storage owner; This desktop implementation does not claim it is already integrated. Local files are not application-encrypted; device/user-account security and backups still matter.
+SQLite is not required to launch this desktop implementation: the existing UI and advisor share the same ledger. The independent SQLite CLI remains intact. The repository's design document discusses SQLite but does not establish a mandatory migration contract. If the final course specification requires the UI to persist through SQLite, coordinate that separate storage integration with the finance/storage owner; this desktop implementation does not claim it is already integrated. Local files are not application-encrypted; device/user-account security and backups still matter.
 
-## Reproducible Linux build
+## Stage resources for Electron development
 
-Development prerequisites: Node.js 22+, npm, Docker, curl, and normal Linux desktop libraries. These are **build/test** prerequisites, not additional end-user installations. From `app/`:
+Source checkout does not include GGUF weights or native inference binaries. `npm ci`, tests, TypeScript checks, lint and `npm run build` do not provision them. `npm run desktop` builds the frontend and runs Electron; `npm run package:dir` builds an unpacked application directory. Both require the appropriate resources to be present first.
+
+For the verified **Linux x64** path, install Node.js 22+, npm, Docker, curl and normal Linux desktop libraries. Obtain the team-approved **Qwen3 1.7B Q4_K_M GGUF** locally; the example assumes `$HOME/Models/ReceiptAI/Qwen3-1.7B-Q4_K_M.gguf`. Its SHA-256 must be `d2387ca2dbfee2ffabce7120d3770dadca0b293052bc2f0e138fdc940d9bc7b5`. No public download location is asserted here: the exact quantizer origin remains unverified, so request the approved build asset from the team and retain its provenance/redistribution records.
+
+Starting at the repository root:
 
 ```sh
+cd app
 npm ci
 bash scripts/build-linux-container.sh
 MODEL_FILE="$HOME/Models/ReceiptAI/Qwen3-1.7B-Q4_K_M.gguf" \
   NATIVE_BIN_DIR=build/native/linux-x64 npm run stage:desktop
+npm run desktop
+```
+
+The build script checks pinned llama.cpp source `60ef23d6` and builds CPU-only x64 backends in an Ubuntu 22.04 container. It copies the native executable and matching GCC runtime libraries into `app/build/native/linux-x64/`. The staging script copies the model to `app/resources/models/Qwen3-1.7B-Q4_K_M.gguf`, native files to `app/resources/native/linux-x64/`, and writes a native hash manifest. It checks the exact approved model hash and requires the executable and license files; it does not download or compile missing assets.
+
+`MODEL_FILE` is the existing local GGUF to copy; `NATIVE_BIN_DIR` is the built directory containing llama-server and its libraries. If the approved model is already at the staging destination, omit `MODEL_FILE` rather than copying the file onto itself. Use host-matching native resources: the desktop selects `resources/native/<platform>-<arch>/`. Windows/macOS build preparation is described below, but packaged runtime verification is pending.
+
+Electron development reads `app/resources/` and the built `app/dist/`, starts the managed inference process automatically, and uses an authenticated ephemeral loopback port. It does not connect to the manually started browser-development server at port 8080. Wait for the local AI ready status. CPU-only inference uses context 4096, at most eight threads, one slot, zero GPU layers and `--jinja --reasoning-budget 0`.
+
+## Build a standalone Linux installer
+
+Complete [resource staging](#stage-resources-for-electron-development) first, then close the development application. From `app/`:
+
+```sh
 bash scripts/collect-runtime-sources.sh
 python3 scripts/collect-appimage-sources.py
 npm run package:linux
@@ -42,11 +61,11 @@ node scripts/verify-package.cjs release/linux-unpacked
 node scripts/write-checksums.cjs
 ```
 
-The native build uses an Ubuntu 22.04 userspace and pinned llama.cpp source `60ef23d6`; its archive SHA-256 is checked. It builds dispatchable x64 CPU backends rather than tuning solely for the build workstation. Matching libstdc++/libgcc runtime libraries accompany the native executable; glibc and desktop GUI libraries remain OS prerequisites. Electron/Chromium also impose their own current OS/CPU requirements. Fedora success does not prove compatibility with every Linux distribution or every old x64 processor.
+The source-collection steps also require Python 3 and use the Docker builder prepared above. They retain the required corresponding-source materials for distribution. Packaging can fetch pinned packaging tools; it does not fetch the GGUF or compile llama.cpp. Build-time downloads require network access; the finished application does not.
 
-Outputs: `app/release/Receipt.AI-1.0.0-rc.2-linux-x86_64.AppImage`, `.rpm`, and `linux-unpacked/`. The model and native files live outside `app.asar` under `resources/models/` and `resources/native/<platform>-<arch>/`. The GGUF has SHA-256 `d2387ca2dbfee2ffabce7120d3770dadca0b293052bc2f0e138fdc940d9bc7b5`. Staging refuses different weights. `manifest.json` records native hashes.
+Outputs are `app/release/Receipt.AI-1.0.0-rc.2-linux-x86_64.AppImage`, the matching `.rpm`, and `linux-unpacked/`. Distribute the installer with its checksum and the required `release/sources/` archives. The model and native runtime are included outside `app.asar` under packaged `resources/models/` and `resources/native/<platform>-<arch>/`, together with licensing materials. Users of these complete packages do not install Node.js or manually set up AI.
 
-Launch the executable AppImage from the desktop file manager, or install the RPM using the system package manager. The AppImage uses the pinned static-runtime toolset `1.0.3`, rather than the legacy launcher that unconditionally disables sandboxing. On Linux, user namespaces must be available; the app refuses an injected `--no-sandbox` flag. Hosts disallowing FUSE can use the runtime's extract-and-run mode, but ordinary first-launch testing on Fedora uses the executable AppImage directly. Runtime download/update code is not included.
+Matching libstdc++/libgcc runtime libraries accompany the native executable; glibc and desktop GUI libraries remain OS prerequisites. Electron/Chromium impose their own OS/CPU requirements. Fedora/Ubuntu validation does not prove compatibility with every Linux distribution or old processor. The AppImage uses pinned static-runtime toolset `1.0.3`; Linux user namespaces must be available, and the app rejects `--no-sandbox`. Hosts disallowing FUSE can use the runtime's extract-and-run mode. Runtime download/update code is not included.
 
 ## Native build preparation and manual CI
 
