@@ -2,6 +2,7 @@
 const { _electron } = require('playwright')
 const fs = require('node:fs'), path = require('node:path'), assert = require('node:assert/strict')
 const { csvFor } = require('../../benchmarks/suite.cjs')
+const { readState, seedState } = require('./synthetic-state.cjs')
 async function main() {
   const [mode, executable, profile, snapshot] = process.argv.slice(2)
   assert.ok(['seed', 'verify'].includes(mode)); assert.ok(path.isAbsolute(profile))
@@ -18,16 +19,21 @@ async function main() {
     if (mode === 'seed') {
       await page.locator('input[type=file]').setInputFiles({ name: 'synthetic-upgrade.csv', mimeType: 'text/csv', buffer: Buffer.from(csvFor('balanced')) })
       await page.getByRole('button', { name: 'Confirm Import', exact: true }).click()
-      const ledger = await page.evaluate(() => { const rows = JSON.parse(localStorage.getItem('receipt-ai.ledger.v1')); rows[0].category_source = 'manual'; localStorage.setItem('receipt-ai.ledger.v1', JSON.stringify(rows)); return rows })
+      const state = await seedState(page), ledger = state['receipt-ai.ledger.v1']
       assert.equal(ledger.length, 14)
-      fs.writeFileSync(snapshot, JSON.stringify({ version, ledger }, null, 2))
+      fs.writeFileSync(snapshot, JSON.stringify({ version, ledger, state }, null, 2))
     } else {
       const before = JSON.parse(fs.readFileSync(snapshot))
       assert.notEqual(version, before.version)
       assert.deepEqual(await page.evaluate(() => JSON.parse(localStorage.getItem('receipt-ai.ledger.v1'))), before.ledger)
+      assert.deepEqual(await readState(page), before.state)
+      await page.getByRole('button', { name: 'Budgets', exact: true }).click()
+      await page.getByText('1 saved budgets', { exact: true }).waitFor()
+      await page.getByRole('button', { name: 'Recurring Expenses', exact: true }).click()
+      await page.getByText('Synthetic confirmed service', { exact: true }).first().waitFor()
       await page.getByRole('button', { name: 'Transactions', exact: true }).click()
       await page.screenshot({ path: snapshot + '.png', fullPage: true })
-      fs.writeFileSync(snapshot + '.result.json', JSON.stringify({ status: 'passed', previousVersion: before.version, currentVersion: version, records: before.ledger.length, allFieldsPreserved: true, manualMetadataPreserved: true }, null, 2))
+      fs.writeFileSync(snapshot + '.result.json', JSON.stringify({ status: 'passed', previousVersion: before.version, currentVersion: version, records: before.ledger.length, allFieldsPreserved: true, manualMetadataPreserved: true, budgetsAndRecurringStatePreserved: true }, null, 2))
     }
   } finally { await app.close() }
   for (const pid of [diagnostics?.nativePid, diagnostics?.guardianPid]) if (pid) {

@@ -4,6 +4,7 @@ const os = require('node:os')
 const fs = require('node:fs'), path = require('node:path'), assert = require('node:assert/strict')
 const { csvFor } = require('../../benchmarks/suite.cjs')
 const { ReleaseMetrics } = require('./release-metrics.cjs')
+const { readState, seedState } = require('./synthetic-state.cjs')
 const root = path.resolve(__dirname, '../..'), output = path.join(root, 'artifacts', process.env.DESKTOP_ARTIFACT_PHASE || 'phase6', process.env.DESKTOP_TEST_RUN || 'packaged')
 const metrics = new ReleaseMetrics(output)
 function defaultExecutable() {
@@ -181,17 +182,21 @@ async function main() {
       await phase(previous.page, 'ready'); await importCsv(previous.page, 'balanced')
       // Seed manual metadata in this synthetic profile; the current Transactions
       // UI is read-only. This checks migration compatibility without adding UI.
-      const before = await previous.page.evaluate(() => { const rows = JSON.parse(localStorage.getItem('receipt-ai.ledger.v1')); rows[0].category_source = 'manual'; localStorage.setItem('receipt-ai.ledger.v1', JSON.stringify(rows)); return rows })
+      const before = await seedState(previous.page)
       const oldVersion = await previous.app.evaluate(({ app }) => app.getVersion())
       await close(previous, 'before-upgrade'); instances.splice(instances.indexOf(previous), 1)
       const updated = await launch(upgradeProfile, events); instances.push(updated)
       await phase(updated.page, 'ready')
       const newVersion = await updated.app.evaluate(({ app }) => app.getVersion())
       assert.notEqual(newVersion, oldVersion, 'Upgrade test requires different application versions')
-      assert.deepEqual(await updated.page.evaluate(() => JSON.parse(localStorage.getItem('receipt-ai.ledger.v1'))), before)
+      assert.deepEqual(await readState(updated.page), before)
+      await updated.page.getByRole('button', { name: 'Budgets', exact: true }).click()
+      await updated.page.getByText('1 saved budgets', { exact: true }).waitFor()
+      await updated.page.getByRole('button', { name: 'Recurring Expenses', exact: true }).click()
+      await updated.page.getByText('Synthetic confirmed service', { exact: true }).first().waitFor()
       await updated.page.getByRole('button', { name: 'Transactions', exact: true }).click()
       await updated.page.screenshot({ path: path.join(output, 'upgrade-persistence.png'), fullPage: true })
-      upgrade = { oldVersion, newVersion, records: before.length, allFieldsPreserved: true, manualMetadataPreserved: true }
+      upgrade = { oldVersion, newVersion, records: before['receipt-ai.ledger.v1'].length, allFieldsPreserved: true, manualMetadataPreserved: true, budgetsAndRecurringStatePreserved: true }
       await close(updated, 'after-upgrade'); instances.splice(instances.indexOf(updated), 1)
     }
     const summary = { status: 'passed', executable, initial, prefs, upgrade, offlineMethod: process.env.DESKTOP_NETWORK_ISOLATED ? 'Real OS network namespace with only loopback, including first launch and inference' : 'Application blocks external renderer HTTP; inference is main-process loopback' , results, events, lifecycle: { automaticStartup: true, isolatedProfiles: true, authenticatedEndpoint: true, normalShutdown: true, profilePersistence: true, crashPersistence: true, processCrashRecovery: true, mainProcessCrashCleanup: true, missingModelRecovery: true, invalidModelFailure: true, cancellation: true } }
