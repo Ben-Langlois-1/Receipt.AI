@@ -10,7 +10,7 @@ for (const recovers of [true, false]) test(`truncated completions use only the e
   let calls = 0
   globalThis.fetch = (async (_url, init) => {
     const body = JSON.parse(String(init?.body)); calls++
-    assert.match(body.messages[0].content, /one short sentence per category/)
+    assert.match(body.messages[0].content, /requiredOutputLines/)
     if (calls === 2) assert.match(body.messages[0].content, /Retry:/)
     assert.ok(calls <= 2)
     return new Response(JSON.stringify({ choices: [{ finish_reason: recovers && calls === 2 ? 'stop' : 'length', message: { content: recovers && calls === 2 ? 'Dining: consider planning restaurant visits. Coverage is unverified.' : 'UNSAFE INCOMPLETE $999' } }] }))

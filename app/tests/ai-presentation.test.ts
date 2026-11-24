@@ -97,3 +97,17 @@ test('all-time figures display both date bounds and cancellation is preserved', 
   await assert.rejects(() => askAdvisorReport('Explain', context, controller.signal), /cancelled/)
   assert.equal(screenExplanation('1. **Review** category labels.'), true)
 })
+
+test('future-dated imported records are prominent and remain explicitly scoped', async (t) => {
+  const original = globalThis.fetch
+  t.after(() => { globalThis.fetch = original })
+  globalThis.fetch = (async () => { assert.fail('No inference expected') }) as typeof fetch
+  const future = buildAdvisorContext([row('2026-11-20', -10), row('2026-12-01', -15), row('2026-12-23', -20)])
+  const report = await askAdvisorReport('How much did I spend?', future, undefined, options)
+  assert.deepEqual(report.futureDatedRecords, { transactions: 2, earliest: '2026-12-01', latest: '2026-12-23' })
+  assert.match(report.notice, /Future-dated import warning/)
+  assert.match(report.notice, /remain included/)
+  const html = renderToStaticMarkup(createElement(AdvisorResponse, { report }))
+  assert.match(html, /role="alert"/)
+  assert.match(html, /occur after 2026-11-22/)
+})

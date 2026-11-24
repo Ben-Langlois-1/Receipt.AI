@@ -44,6 +44,7 @@ export function AdvisorResponse({ report }: { report: AdvisorReport }) {
     h('section', { 'aria-label': 'Verified financial figures' },
       h('h4', null, 'Verified financial figures'),
       h('p', { className: 'muted' }, `Calculated from imported records · As of ${report.asOfDate} · ${report.timezone}`),
+      report.futureDatedRecords ? h('p', { role: 'alert' }, `Future-dated records: ${report.futureDatedRecords.transactions} imported transaction${report.futureDatedRecords.transactions === 1 ? '' : 's'} dated ${report.futureDatedRecords.earliest} through ${report.futureDatedRecords.latest} occur after ${report.asOfDate}. They are included below; verify their dates before acting on these figures.`) : null,
       ...report.figures.map((row, i) => h('div', { key: i, className: 'advisor-figures' },
         h('h4', null, `${row.period} · ${row.currency}`),
         h('p', null, row.endExclusive ? `${row.startInclusive} inclusive to ${row.endExclusive} exclusive` : `Imported date range: ${row.startInclusive} through ${row.endInclusive} inclusive`),
@@ -69,6 +70,7 @@ export function AdvisorResponse({ report }: { report: AdvisorReport }) {
 /** Serialize the data, not collapsed DOM details, for reliable clipboard output. */
 export function reportToPlainText(report: AdvisorReport): string {
   const lines = ['Verified financial figures', `As of ${report.asOfDate} · ${report.timezone}`]
+  if (report.futureDatedRecords) lines.push(`Future-dated records: ${report.futureDatedRecords.transactions} imported transaction${report.futureDatedRecords.transactions === 1 ? '' : 's'} dated ${report.futureDatedRecords.earliest} through ${report.futureDatedRecords.latest} occur after ${report.asOfDate}; they are included in the figures and should be verified.`)
   for (const row of report.figures) {
     lines.push(`${row.period} · ${row.currency}`, row.endExclusive ? `${row.startInclusive} inclusive to ${row.endExclusive} exclusive` : `${row.startInclusive} through ${row.endInclusive} inclusive`,
       `Coverage: ${row.coverage === 'no_records' ? 'no records; spending unknown' : 'unverified'} · ${row.transactions} imported transactions`,

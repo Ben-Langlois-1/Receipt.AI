@@ -30,10 +30,19 @@ export function buildRecommendationPlan(query: Query, question: string): Recomme
 }
 
 /** Quality checks require evidence-grounded category references, never fabricated figures. */
-export function checkRecommendationPlan(text: string, plan: RecommendationPlan): Array<'missing_grounding' | 'constraint_violation'> {
-  const reasons: Array<'missing_grounding' | 'constraint_violation'> = []
+export function checkRecommendationPlan(text: string, plan: RecommendationPlan): Array<'missing_grounding' | 'unexpected_category' | 'constraint_violation'> {
+  const reasons: Array<'missing_grounding' | 'unexpected_category' | 'constraint_violation'> = []
   const lower = text.toLowerCase()
-  if (plan.reviewCategories.some((r) => !lower.includes(r.category.toLowerCase()))) reasons.push('missing_grounding')
+  // A response remains grounded when it gives a useful subset of the verified
+  // plan. Requiring every ranked category caused otherwise safe Qwen answers to
+  // be discarded. Two distinct plan categories (or the sole category) retain
+  // personalization without accepting generic advice.
+  const grounded = plan.reviewCategories.filter((r) => lower.includes(r.category.toLowerCase())).length
+  if (grounded < Math.min(2, plan.reviewCategories.length)) reasons.push('missing_grounding')
+  const planned = new Set(plan.reviewCategories.map(item => item.category.toLowerCase()))
+  for (const match of text.matchAll(/^\s*(?:[-*]\s*)?\*\*([^*\n]+)\*\*\s*:/gm)) {
+    if (!planned.has(match[1].trim().toLowerCase())) reasons.push('unexpected_category')
+  }
   const prose = text.replace(/[*_`]/g, '')
   for (const category of plan.protectedCategories) {
     // Reject references unless the entire line explicitly preserves this category.
@@ -45,5 +54,17 @@ export function checkRecommendationPlan(text: string, plan: RecommendationPlan):
       return !/preserve|unchanged|fixed|as is|the same/i.test(normalized) || /\b(?:reduce|cut|lower|renegotiate|replace|cancel|combine|compare|move|relocate)\b/i.test(normalized)
     })) reasons.push('constraint_violation')
   }
-  return reasons
+  return [...new Set(reasons)]
+}
+
+/** Safe application-authored guidance when both model attempts are rejected. */
+export function renderRecommendationFallback(plan: RecommendationPlan): string {
+  const lines = ['Application-generated fallback (not AI-generated):']
+  if (plan.reviewCategories.length) {
+    for (const item of plan.reviewCategories) lines.push(`- **${item.category}**: ${item.instruction}`)
+  } else {
+    lines.push('- Review the underlying imported transactions and verify their category labels before considering changes.')
+  }
+  lines.push('Coverage is unverified and category labels need checking; these are options, not guaranteed outcomes.')
+  return lines.join('\n')
 }

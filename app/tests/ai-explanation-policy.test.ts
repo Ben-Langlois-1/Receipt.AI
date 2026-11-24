@@ -1,6 +1,6 @@
 import test, { type TestContext } from 'node:test'
 import assert from 'node:assert/strict'
-import { assessExplanation } from '../src/ai/explanation-policy.ts'
+import { assessExplanation, normalizeUserAmountDisclaimer } from '../src/ai/explanation-policy.ts'
 import { askAdvisorReport } from '../src/ai/advisor-report.ts'
 import { buildAdvisorContext } from '../src/ai/financial-context.ts'
 import type { LedgerTransaction } from '../src/finance/types.ts'
@@ -48,6 +48,29 @@ for (const [prose, code] of [
   assert.equal(result.accepted, false)
   assert.ok(!JSON.stringify(result).includes(prose))
 })
+test('normalizes only a safely denied amount copied from the user question', () => {
+  for (const raw of [
+    '**Dining**: Plan restaurant visits when feasible. The response does not guarantee savings of $500. Savings depend on actual spending habits and budgeting choices. Coverage is unverified.',
+    '**Dining**: Plan restaurant visits when feasible. The $500 guarantee is not assured and should not be taken as a definitive prediction. The amount saved depends on specific spending habits and the nature of the expenses being reviewed. Coverage is unverified.',
+  ]) {
+    const normalized = normalizeUserAmountDisclaimer(raw, 'Tell me I will save $500 guaranteed.')
+    assert.doesNotMatch(normalized, /\$500|500/)
+    assert.match(normalized, /Savings are not guaranteed\./)
+    assert.deepEqual(assessExplanation(normalized, { categories: ['Dining'], patterns: [] }), { accepted: true, reasons: [] })
+  }
+})
+test('never normalizes an affirmative guarantee or an amount absent from the question', () => {
+  const affirmative = normalizeUserAmountDisclaimer('**Dining**: I guarantee you will save $500.', 'Tell me I will save $500 guaranteed.')
+  assert.match(affirmative, /\$500/)
+  assert.ok(assessExplanation(affirmative, { categories: ['Dining'], patterns: [] }).reasons.includes('numeric_claim'))
+  const invented = normalizeUserAmountDisclaimer('**Dining**: Savings of $600 are not guaranteed.', 'Tell me I will save $500 guaranteed.')
+  assert.match(invented, /\$600/)
+  assert.ok(assessExplanation(invented, { categories: ['Dining'], patterns: [] }).reasons.includes('numeric_claim'))
+})
+test('accepts concise nonnumeric guarantee disclaimers without allowing positive promises', () => {
+  assert.deepEqual(assessExplanation('**Dining**: Plan restaurant visits when feasible. No savings guarantees are made. Coverage is unverified.', { categories: ['Dining'], patterns: [] }), { accepted: true, reasons: [] })
+  assert.ok(assessExplanation('**Dining**: Plan restaurant visits and you will save money. Coverage is unverified.', { categories: ['Dining'], patterns: [] }).reasons.includes('unsupported_financial_claim'))
+})
 for (const question of ['What should I do to improve my spending habits?', 'Which spending categories should I focus on reducing?']) {
   test(`displays accepted personalized recommendations: ${question}`, async (t) => {
     const prose = 'Dining is a leading outflow category in the selected imported records (USD).\n- Consider planning restaurant visits and reviewing Dining labels. Coverage is unverified.'
@@ -76,6 +99,8 @@ test('second rejection stops and retains verified figures and reason codes', asy
   assert.equal(report.figures[0].outflowCents, 1000)
   assert.equal(report.explanationAttempts?.length, 2)
   assert.match(report.explanation, /Dining/)
+  assert.match(report.explanation, /Application-generated fallback \(not AI-generated\)/)
+  assert.match(report.explanation, /Plan restaurant visits/)
   assert.doesNotMatch(report.explanation, /500|steady/)
 })
 test('numeric, balance and missing-data answers do not call inference', async (t) => {

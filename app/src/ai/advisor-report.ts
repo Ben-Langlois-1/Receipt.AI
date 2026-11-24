@@ -1,4 +1,4 @@
-import { buildRecommendationPlan, checkRecommendationPlan } from './recommendation-plan.ts'
+import { buildRecommendationPlan, checkRecommendationPlan, renderRecommendationFallback } from './recommendation-plan.ts'
 import { assessExplanation, normalizeUserAmountDisclaimer, type RejectionReason, type ExplanationEvidence } from './explanation-policy.ts'
 import type { AdvisorContext } from './financial-context.ts'
 import { ADVISOR_TIMEZONE, BALANCE_LIMITATION, calendarDate, queryFinancialFacts, qualitativeEvidence } from './financial-facts.ts'
@@ -23,6 +23,7 @@ export interface AdvisorReport {
   figures: FigureRow[]
   comparisons: Array<{ category?: string; currency: string; previousMonth: string; currentMonth: string; differenceCents: number; percentageChange: number | null }>
   explanationAttempts?: Array<{ reasons: RejectionReason[] }>
+  futureDatedRecords?: { transactions: number; earliest: string; latest: string }
   notice: string
   explanation: string
   explanationStatus: 'checked' | 'withheld' | 'unavailable' | 'not_requested'
@@ -45,9 +46,18 @@ export async function askAdvisorReport(question: string, context: AdvisorContext
   const timezone = options.timezone ?? ADVISOR_TIMEZONE
   const asOfDate = calendarDate(now, timezone)
   const report: AdvisorReport = { asOfDate, timezone, figures: [], comparisons: [], notice: '', explanation: '', explanationStatus: 'not_requested' }
-  if (/\bbalances?\b|how much (?:money )?(?:do i have|is in my account)/i.test(trimmed)) return { ...report, notice: BALANCE_LIMITATION }
+  const futureDates = context.dateCounts.filter((entry) => entry.date > asOfDate)
+  if (futureDates.length) report.futureDatedRecords = {
+    transactions: futureDates.reduce((sum, entry) => sum + entry.transactions, 0),
+    earliest: futureDates[0].date,
+    latest: futureDates.at(-1)!.date,
+  }
+  const futureNotice = report.futureDatedRecords
+    ? ` Future-dated import warning: ${report.futureDatedRecords.transactions} imported transaction${report.futureDatedRecords.transactions === 1 ? '' : 's'} dated ${report.futureDatedRecords.earliest} through ${report.futureDatedRecords.latest} occur after the as-of date ${asOfDate}. They remain included in the displayed imported totals and category review; verify the dates before acting on them.`
+    : ''
+  if (/\bbalances?\b|how much (?:money )?(?:do i have|is in my account)/i.test(trimmed)) return { ...report, notice: BALANCE_LIMITATION + futureNotice }
   const query = queryFinancialFacts(context.facts, trimmed, asOfDate, timezone)
-  if ('error' in query) return { ...report, notice: query.error! }
+  if ('error' in query) return { ...report, notice: query.error! + futureNotice }
   for (const c of query.currencies) {
     if (query.requestedPeriods.length) {
       for (const period of c.periods) report.figures.push({ ...period, period: period.month, currency: c.currency })
@@ -61,9 +71,9 @@ export async function askAdvisorReport(question: string, context: AdvisorContext
       } else report.comparisons.push({ currency: c.currency, previousMonth: comparison.previousMonth!, currentMonth: comparison.currentMonth!, differenceCents: comparison.differenceCents, percentageChange: comparison.percentageChange! })
     }
   }
-  report.notice = 'Coverage is unverified. Outflows and inflows are recorded money movements, not verified expenses or income. Net cash flow is inflows minus outflows, not a balance or savings. Transfers may be included; refunds are not matched to purchases.'
+  report.notice = 'Coverage is unverified. Outflows and inflows are recorded money movements, not verified expenses or income. Net cash flow is inflows minus outflows, not a balance or savings. Transfers may be included; refunds are not matched to purchases.' + futureNotice
   if (!report.figures.length || report.figures.every((row) => row.coverage === 'no_records')) {
-    report.notice = 'No imported records were found for the requested period. Spending is unknown; missing records do not establish zero spending.'
+    report.notice = 'No imported records were found for the requested period. Spending is unknown; missing records do not establish zero spending.' + futureNotice
     return report
   }
   if (report.figures.some((row) => row.coverage === 'no_records')) report.notice += ' Some requested months have no records; complete-period spending comparisons are unsupported.'
@@ -97,7 +107,7 @@ export async function askAdvisorReport(question: string, context: AdvisorContext
         }
       }
       report.explanationStatus = 'withheld'
-      report.explanation = `The local explanation could not meet the factual presentation rules after a retry. Review the verified figures above.${evidence.categories.length ? ` Consider reviewing these imported category labels: ${evidence.categories.join(', ')}.` : ''} Coverage and category labels need verification before setting a budget.`
+      report.explanation = renderRecommendationFallback(plan)
     })
   } catch (error) {
     if (signal?.aborted) throw error

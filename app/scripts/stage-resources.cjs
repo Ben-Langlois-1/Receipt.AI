@@ -1,14 +1,20 @@
 const fs = require('node:fs'), path = require('node:path'), crypto = require('node:crypto')
 const root = path.resolve(__dirname, '..')
 async function hash(file) { const sum = crypto.createHash('sha256'); for await (const chunk of fs.createReadStream(file)) sum.update(chunk); return sum.digest('hex') }
+function replaceDirectory(directory) {
+  fs.rmSync(directory, { recursive: true, force: true })
+  fs.mkdirSync(directory, { recursive: true })
+}
 async function main() {
   const arch = process.env.NATIVE_ARCH || process.arch, platform = process.env.NATIVE_PLATFORM || process.platform
   if (!['linux', 'win32', 'darwin'].includes(platform) || !['x64', 'arm64'].includes(arch)) throw Error('Unsupported native staging target.')
   const target = `${platform}-${arch}`
   const native = path.resolve(process.env.NATIVE_BIN_DIR || path.join(root, 'build/native', target))
   const destination = path.join(root, 'resources/native', target)
-  fs.mkdirSync(destination, { recursive: true })
   const candidates = fs.readdirSync(native, { recursive: true }).map(f => path.join(native, f)).filter(f => fs.statSync(f).isFile() && /(?:llama-server(?:\.exe)?$|\.so(?:\.\d+)*$|\.dylib$|\.dll$)/i.test(f))
+  // Staging must be a replacement, not an overlay. Otherwise DLLs from a
+  // previous runtime can be silently retained and shipped with a new build.
+  replaceDirectory(destination)
   for (const source of candidates) { const output = path.join(destination, path.basename(source)); fs.copyFileSync(source, output); if (process.platform !== 'win32') fs.chmodSync(output, 0o755) }
   if (platform === 'linux') {
     const { execFileSync } = require('node:child_process')
@@ -33,4 +39,5 @@ async function main() {
   for (const required of ['Qwen3-Apache-2.0.txt', 'llama.cpp-MIT.txt', 'LICENSE-httplib', 'LICENSE-jsonhpp']) if (!fs.existsSync(path.join(root, 'resources/licenses', required))) throw Error(`Missing license ${required}`)
   console.log(`Staged ${target}; approved default model verified. No 4B model is included.`)
 }
-main().catch(error => { console.error(error.message); process.exitCode = 1 })
+if (require.main === module) main().catch(error => { console.error(error.message); process.exitCode = 1 })
+module.exports = { replaceDirectory }

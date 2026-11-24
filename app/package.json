@@ -13,6 +13,7 @@
     "package:linux": "npm run build && node scripts/package-linux.cjs",
     "package:dir": "npm run build && electron-builder --config electron-builder.cjs --dir",
     "test": "node --experimental-strip-types --test tests/*.test.ts",
+    "test:real-model": "node --experimental-strip-types --test tests/real-model-advisor.test.ts",
     "test:desktop": "node tests/e2e/desktop.cjs"
   },
   "dependencies": {

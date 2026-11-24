@@ -22,6 +22,7 @@ export interface AdvisorContext {
   facts: FinancialFacts
   source: 'imported local transaction ledger'
   dataRange: { earliest: string; latest: string } | null
+  dateCounts: Array<{ date: string; transactions: number }>
   includedMonths: number
   currencies: CurrencyContext[]
   limitations: string[]
@@ -39,6 +40,9 @@ function categoriesFor(rows: LedgerTransaction[]) {
 export function buildAdvisorContext(rows: LedgerTransaction[]): AdvisorContext {
   const validRows = validAdvisorRows(rows)
   const sortedDates = validRows.map((row) => row.date).sort()
+  const transactionCountsByDate = new Map<string, number>()
+  for (const row of validRows) transactionCountsByDate.set(row.date, (transactionCountsByDate.get(row.date) ?? 0) + 1)
+  const dateCounts = [...transactionCountsByDate].sort(([left], [right]) => left.localeCompare(right)).map(([date, transactions]) => ({ date, transactions }))
   const months = [...new Set(validRows.map((row) => row.date.slice(0, 7)))].sort()
   // Generate calendar months, including missing months (zero spending), based on
   // the latest imported record rather than incorrectly treating gaps as months.
@@ -88,6 +92,7 @@ export function buildAdvisorContext(rows: LedgerTransaction[]): AdvisorContext {
     facts: buildFinancialFacts(validRows),
     source: 'imported local transaction ledger',
     dataRange: sortedDates.length ? { earliest: sortedDates[0], latest: sortedDates[sortedDates.length - 1] } : null,
+    dateCounts,
     includedMonths: months.filter((month) => last12.includes(month)).length,
     currencies,
     limitations: [

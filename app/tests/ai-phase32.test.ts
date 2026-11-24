@@ -35,9 +35,11 @@ test('real baseline false positives are accepted while inaccurate rankings still
   assert.equal(assessExplanation('Consider checking more affordable options when feasible.').accepted, true)
   assert.ok(assessExplanation('Dining is a leading outflow category.', { categories: ['Dining'], patterns: [] }).reasons.includes('unsupported_pattern'))
 })
-test('missing Uncategorized investigation and housing changes cannot pass plan checks', () => {
+test('a useful grounded subset passes while generic advice and housing changes cannot', () => {
   const plan = planFor('How can I save more money without changing housing?')
-  assert.ok(checkRecommendationPlan('Review Dining, Groceries and Subscriptions.', plan).includes('missing_grounding'))
+  assert.deepEqual(checkRecommendationPlan('Review Dining, Groceries and Subscriptions.', plan), [])
+  assert.ok(checkRecommendationPlan('Review spending and look for optional purchases.', plan).includes('missing_grounding'))
+  assert.ok(checkRecommendationPlan('- **Housing**: Investigate purchases.\n- **Dining**: Plan restaurant visits.\n- **Groceries**: Use a shopping list.', plan).includes('unexpected_category'))
   assert.ok(checkRecommendationPlan('Review Uncategorized, Dining, Groceries and Subscriptions. Reduce your rent.', plan).includes('constraint_violation'))
   assert.deepEqual(checkRecommendationPlan('Keep Housing unchanged. Investigate Uncategorized labels, then consider Dining, Groceries and Subscriptions.', plan), [])
 })
