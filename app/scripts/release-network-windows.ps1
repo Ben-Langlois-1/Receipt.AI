@@ -26,6 +26,7 @@ function Restore-TestFirewallState {
     }
   }
   if ($cleanupErrors.Count -gt 0) { throw ($cleanupErrors -join '; ') }
+  Write-Output "Removed test firewall rules and restored profile state for $Group."
 }
 
 if ($Mode -eq 'Disable') {
@@ -45,12 +46,13 @@ try {
   Get-NetFirewallProfile | Select-Object Name,Enabled | ConvertTo-Json | Write-Output
 
   # Process-specific rules preserve runner connectivity and all loopback traffic.
-  # Canonical IPv4 CIDRs exclude 127/8. Separate rules cover routable IPv6
-  # unicast, local and multicast destinations. The app uses IPv4 loopback.
-  # Server 2022's firewall CIM provider can reject a multi-CIDR RemoteAddress
-  # call with error 87, so add the same scopes as individual, diagnostic rules.
+  # Canonical IPv4 CIDRs exclude non-routable 0/8 and loopback 127/8. Separate
+  # rules cover routable IPv6 unicast, local and multicast destinations. The
+  # app uses IPv4 loopback. Server 2022 rejects a 0.0.0.0/2 RemoteAddress with
+  # error 87, so cover its routable portion with equivalent nonzero prefixes.
   $outsideAddresses = @(
-    '0.0.0.0/2','64.0.0.0/3','96.0.0.0/4','112.0.0.0/5',
+    '1.0.0.0/8','2.0.0.0/7','4.0.0.0/6','8.0.0.0/5','16.0.0.0/4','32.0.0.0/3',
+    '64.0.0.0/3','96.0.0.0/4','112.0.0.0/5',
     '120.0.0.0/6','124.0.0.0/7','126.0.0.0/8','128.0.0.0/1',
     '2000::/3','fc00::/7','fe80::/10','ff00::/8'
   )
@@ -69,6 +71,7 @@ try {
   }
   $installedRules = @(Get-NetFirewallRule -Group $Group -ErrorAction Stop)
   if ($installedRules.Count -ne $ruleIndex) { throw "Expected $ruleIndex test firewall rules, found $($installedRules.Count)." }
+  Write-Output "Installed $ruleIndex scoped outbound block rules for offline verification."
 } catch {
   $enableError = $_
   try { Restore-TestFirewallState } catch { Write-Warning "Firewall rollback failed: $($_.Exception.Message)" }
