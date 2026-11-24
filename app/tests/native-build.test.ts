@@ -33,3 +33,12 @@ test('native staging removes files left by an earlier runtime', (t) => {
   replaceDirectory(directory)
   assert.deepEqual(fs.readdirSync(directory), [])
 })
+
+test('Windows offline harness uses Server-compatible scoped rules with rollback', () => {
+  const script = fs.readFileSync(new URL('../scripts/release-network-windows.ps1', import.meta.url), 'utf8')
+  assert.match(script, /foreach \(\$address in \$outsideAddresses\)/)
+  assert.match(script, /-Program \$program -RemoteAddress \$address/)
+  assert.doesNotMatch(script, /-RemoteAddress \$outsideIPv[46]/)
+  assert.match(script, /catch \{\s*\$enableError = \$_\s*try \{ Restore-TestFirewallState \}/)
+  assert.match(script, /Remove-Item -LiteralPath \$stateFile -Force/)
+})

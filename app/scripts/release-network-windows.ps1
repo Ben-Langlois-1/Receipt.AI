@@ -1,36 +1,76 @@
 param([ValidateSet('Enable','Disable')][string]$Mode, [string]$Directory, [string]$Group)
 $ErrorActionPreference = 'Stop'
 if ($Group -notmatch '^ReceiptAI-Test-[0-9]+$') { throw 'Invalid test firewall group' }
-if ($Mode -eq 'Disable') {
-  Get-NetFirewallRule -Group $Group -ErrorAction SilentlyContinue | Remove-NetFirewallRule
-  $stateFile = Join-Path $Directory '..\firewall-state.json'
+
+$stateFile = Join-Path $Directory '..\firewall-state.json'
+function Restore-TestFirewallState {
+  $cleanupErrors = @()
+  try {
+    Get-NetFirewallRule -Group $Group -ErrorAction SilentlyContinue | Remove-NetFirewallRule -ErrorAction Stop
+  } catch {
+    $cleanupErrors += "remove test rules: $($_.Exception.Message)"
+  }
   if (Test-Path $stateFile) {
+    $profileRestoreFailed = $false
     foreach ($old in @(Get-Content $stateFile -Raw | ConvertFrom-Json)) {
-      $enabled = if ($old.Enabled) { 'True' } else { 'False' }
-      Set-NetFirewallProfile -Name $old.Name -Enabled $enabled
+      try {
+        $enabled = if ($old.Enabled) { 'True' } else { 'False' }
+        Set-NetFirewallProfile -Name $old.Name -Enabled $enabled
+      } catch {
+        $profileRestoreFailed = $true
+        $cleanupErrors += "restore $($old.Name) firewall profile: $($_.Exception.Message)"
+      }
+    }
+    if (!$profileRestoreFailed) {
+      try { Remove-Item -LiteralPath $stateFile -Force } catch { $cleanupErrors += "remove saved firewall state: $($_.Exception.Message)" }
     }
   }
+  if ($cleanupErrors.Count -gt 0) { throw ($cleanupErrors -join '; ') }
+}
+
+if ($Mode -eq 'Disable') {
+  Restore-TestFirewallState
   exit 0
 }
-$profiles = @(Get-NetFirewallProfile)
-$disabled = @($profiles | Where-Object { $_.Enabled -ne 'True' })
-if ($disabled.Count -gt 0 -and $env:GITHUB_ACTIONS -ne 'true') {
-  throw 'Offline verification needs active Windows Firewall profiles. Automatic profile changes are restricted to disposable GitHub runners.'
-}
-$profiles | ForEach-Object { @{ Name = $_.Name; Enabled = ($_.Enabled -eq 'True') } } | ConvertTo-Json | Set-Content (Join-Path $Directory '..\firewall-state.json')
-if ($disabled.Count -gt 0) { Set-NetFirewallProfile -Profile Domain,Public,Private -Enabled True }
-if (@(Get-NetFirewallProfile | Where-Object { $_.Enabled -ne 'True' }).Count -gt 0) { throw 'Windows Firewall enforcement is unavailable.' }
-Get-NetFirewallProfile | Select-Object Name,Enabled | ConvertTo-Json | Write-Output
-# Process-specific rules preserve runner connectivity and all loopback traffic.
-# Canonical IPv4 CIDRs exclude 127/8. Separate rules cover routable IPv6
-# unicast, local and multicast destinations. The app uses IPv4 loopback.
-$outsideIPv4 = @('0.0.0.0/2','64.0.0.0/3','96.0.0.0/4','112.0.0.0/5','120.0.0.0/6','124.0.0.0/7','126.0.0.0/8','128.0.0.0/1')
-$outsideIPv6 = @('2000::/3','fc00::/7','fe80::/10','ff00::/8')
-$index = 0
-foreach ($relative in @('receipt-ai.exe', 'resources\native\win32-x64\llama-server.exe')) {
-  $program = Join-Path $Directory $relative
-  if (!(Test-Path $program)) { throw "Installed executable missing: $relative" }
-  $index++
-  New-NetFirewallRule -DisplayName "$Group-$index-v4" -Group $Group -Direction Outbound -Action Block -Profile Any -Program $program -RemoteAddress $outsideIPv4 | Out-Null
-  New-NetFirewallRule -DisplayName "$Group-$index-v6" -Group $Group -Direction Outbound -Action Block -Profile Any -Program $program -RemoteAddress $outsideIPv6 | Out-Null
+
+try {
+  $profiles = @(Get-NetFirewallProfile)
+  $disabled = @($profiles | Where-Object { $_.Enabled -ne 'True' })
+  if ($disabled.Count -gt 0 -and $env:GITHUB_ACTIONS -ne 'true') {
+    throw 'Offline verification needs active Windows Firewall profiles. Automatic profile changes are restricted to disposable GitHub runners.'
+  }
+  $profiles | ForEach-Object { @{ Name = $_.Name; Enabled = ($_.Enabled -eq 'True') } } | ConvertTo-Json | Set-Content $stateFile
+  if ($disabled.Count -gt 0) { Set-NetFirewallProfile -Profile Domain,Public,Private -Enabled True }
+  if (@(Get-NetFirewallProfile | Where-Object { $_.Enabled -ne 'True' }).Count -gt 0) { throw 'Windows Firewall enforcement is unavailable.' }
+  Get-NetFirewallProfile | Select-Object Name,Enabled | ConvertTo-Json | Write-Output
+
+  # Process-specific rules preserve runner connectivity and all loopback traffic.
+  # Canonical IPv4 CIDRs exclude 127/8. Separate rules cover routable IPv6
+  # unicast, local and multicast destinations. The app uses IPv4 loopback.
+  # Server 2022's firewall CIM provider can reject a multi-CIDR RemoteAddress
+  # call with error 87, so add the same scopes as individual, diagnostic rules.
+  $outsideAddresses = @(
+    '0.0.0.0/2','64.0.0.0/3','96.0.0.0/4','112.0.0.0/5',
+    '120.0.0.0/6','124.0.0.0/7','126.0.0.0/8','128.0.0.0/1',
+    '2000::/3','fc00::/7','fe80::/10','ff00::/8'
+  )
+  $ruleIndex = 0
+  foreach ($relative in @('receipt-ai.exe', 'resources\native\win32-x64\llama-server.exe')) {
+    $program = Join-Path $Directory $relative
+    if (!(Test-Path $program)) { throw "Installed executable missing: $relative" }
+    foreach ($address in $outsideAddresses) {
+      $ruleIndex++
+      try {
+        New-NetFirewallRule -DisplayName "$Group-$ruleIndex" -Group $Group -Direction Outbound -Action Block -Profile Any -Program $program -RemoteAddress $address | Out-Null
+      } catch {
+        throw "New-NetFirewallRule rejected Program='$program' RemoteAddress='$address': $($_.Exception.Message)"
+      }
+    }
+  }
+  $installedRules = @(Get-NetFirewallRule -Group $Group -ErrorAction Stop)
+  if ($installedRules.Count -ne $ruleIndex) { throw "Expected $ruleIndex test firewall rules, found $($installedRules.Count)." }
+} catch {
+  $enableError = $_
+  try { Restore-TestFirewallState } catch { Write-Warning "Firewall rollback failed: $($_.Exception.Message)" }
+  throw $enableError
 }
