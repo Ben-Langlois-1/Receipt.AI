@@ -38,6 +38,10 @@ test('Windows offline harness uses Server-compatible scoped rules with rollback'
   const script = fs.readFileSync(new URL('../scripts/release-network-windows.ps1', import.meta.url), 'utf8')
   assert.match(script, /foreach \(\$address in \$outsideAddresses\)/)
   assert.match(script, /-Program \$program -RemoteAddress \$address/)
+  // Hosted runner TEMP is an 8.3 short path; the firewall needs the long image path.
+  assert.match(script, /GetLongPathName/)
+  const expand = script.indexOf('$program = Get-LongPath $program')
+  assert.ok(expand > 0 && expand < script.indexOf('New-NetFirewallRule'))
   assert.doesNotMatch(script, /-RemoteAddress \$outsideIPv[46]/)
   assert.doesNotMatch(script, /'\d{1,3}(?:\.\d{1,3}){3}\/\d+'/)
   for (const scope of ['1.0.0.0-126.255.255.255', '128.0.0.0-255.255.255.255', '2000::-3fff:ffff:ffff:ffff:ffff:ffff:ffff:ffff', 'ff00::-ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff']) assert.ok(script.includes(`'${scope}'`))

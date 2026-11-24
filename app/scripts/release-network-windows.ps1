@@ -29,6 +29,19 @@ function Restore-TestFirewallState {
   Write-Output "Removed test firewall rules and restored profile state for $Group."
 }
 
+# Hosted runners expose TEMP as an 8.3 short path (C:\Users\RUNNER~1\...).
+# Windows Firewall cannot resolve a short-name -Program (error 87) and matches
+# processes by their long image path, so expand program paths first.
+function Get-LongPath([string]$Path) {
+  if (-not ('ReceiptAI.NativePath' -as [type])) {
+    Add-Type -Namespace ReceiptAI -Name NativePath -MemberDefinition '[DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)] public static extern uint GetLongPathName(string shortPath, System.Text.StringBuilder longPath, uint bufferLength);'
+  }
+  $buffer = New-Object System.Text.StringBuilder 32768
+  $length = [ReceiptAI.NativePath]::GetLongPathName($Path, $buffer, [uint32]$buffer.Capacity)
+  if ($length -eq 0 -or $length -ge $buffer.Capacity) { throw "Could not resolve long path for $Path" }
+  $buffer.ToString()
+}
+
 if ($Mode -eq 'Disable') {
   Restore-TestFirewallState
   exit 0
@@ -48,9 +61,8 @@ try {
   # Process-specific rules preserve runner connectivity and all loopback traffic.
   # IPv4 ranges exclude non-routable 0/8 and loopback 127/8. Separate ranges
   # cover routable IPv6 unicast, local and multicast destinations. The app
-  # uses IPv4 loopback. The Server 2022 firewall CIM provider on hosted runners
-  # rejects CIDR RemoteAddress values with error 87 but accepts documented
-  # address-range syntax for the same scopes.
+  # uses IPv4 loopback. Documented address-range syntax expresses the same
+  # scopes as the equivalent CIDRs.
   $outsideAddresses = @(
     '1.0.0.0-126.255.255.255',
     '128.0.0.0-255.255.255.255',
@@ -63,6 +75,7 @@ try {
   foreach ($relative in @('receipt-ai.exe', 'resources\native\win32-x64\llama-server.exe')) {
     $program = Join-Path $Directory $relative
     if (!(Test-Path $program)) { throw "Installed executable missing: $relative" }
+    $program = Get-LongPath $program
     foreach ($address in $outsideAddresses) {
       $ruleIndex++
       try {
