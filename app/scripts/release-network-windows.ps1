@@ -46,15 +46,18 @@ try {
   Get-NetFirewallProfile | Select-Object Name,Enabled | ConvertTo-Json | Write-Output
 
   # Process-specific rules preserve runner connectivity and all loopback traffic.
-  # Canonical IPv4 CIDRs exclude non-routable 0/8 and loopback 127/8. Separate
-  # rules cover routable IPv6 unicast, local and multicast destinations. The
-  # app uses IPv4 loopback. Server 2022 rejects a 0.0.0.0/2 RemoteAddress with
-  # error 87, so cover its routable portion with equivalent nonzero prefixes.
+  # IPv4 ranges exclude non-routable 0/8 and loopback 127/8. Separate ranges
+  # cover routable IPv6 unicast, local and multicast destinations. The app
+  # uses IPv4 loopback. The Server 2022 firewall CIM provider on hosted runners
+  # rejects CIDR RemoteAddress values with error 87 but accepts documented
+  # address-range syntax for the same scopes.
   $outsideAddresses = @(
-    '1.0.0.0/8','2.0.0.0/7','4.0.0.0/6','8.0.0.0/5','16.0.0.0/4','32.0.0.0/3',
-    '64.0.0.0/3','96.0.0.0/4','112.0.0.0/5',
-    '120.0.0.0/6','124.0.0.0/7','126.0.0.0/8','128.0.0.0/1',
-    '2000::/3','fc00::/7','fe80::/10','ff00::/8'
+    '1.0.0.0-126.255.255.255',
+    '128.0.0.0-255.255.255.255',
+    '2000::-3fff:ffff:ffff:ffff:ffff:ffff:ffff:ffff',
+    'fc00::-fdff:ffff:ffff:ffff:ffff:ffff:ffff:ffff',
+    'fe80::-febf:ffff:ffff:ffff:ffff:ffff:ffff:ffff',
+    'ff00::-ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff'
   )
   $ruleIndex = 0
   foreach ($relative in @('receipt-ai.exe', 'resources\native\win32-x64\llama-server.exe')) {
