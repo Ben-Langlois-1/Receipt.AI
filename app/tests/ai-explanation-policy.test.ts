@@ -16,8 +16,8 @@ function replies(t: TestContext, answers: string[]) {
     const body = JSON.parse(String(init?.body))
     assert.ok(!String(init?.body).includes('SECRET'))
     assert.ok(!String(init?.body).includes('outflowCents'))
-    assert.ok(body.messages[0].content.includes('words such as "may"'))
-    if (calls) assert.ok(body.messages[0].content.includes('Retry:'))
+    assert.ok(body.messages[0].content.includes('Copy amounts and percentages exactly as written'))
+    if (calls) assert.ok(body.messages[0].content.includes('previous answer was rejected because'))
     const answer = answers[calls++]
     assert.ok(answer !== undefined, 'Unexpected extra generation')
     return new Response(JSON.stringify({ choices: [{ finish_reason: 'stop', message: { content: answer } }] }))
@@ -73,44 +73,47 @@ test('accepts concise nonnumeric guarantee disclaimers without allowing positive
 })
 for (const question of ['What should I do to improve my spending habits?', 'Which spending categories should I focus on reducing?']) {
   test(`displays accepted personalized recommendations: ${question}`, async (t) => {
-    const prose = 'Dining is a leading outflow category in the selected imported records (USD).\n- Consider planning restaurant visits and reviewing Dining labels. Coverage is unverified.'
+    const prose = 'Dining is your only imported outflow category, at 10.00 USD.\n- Consider planning restaurant visits and checking Dining labels. These figures cover imported records only.'
     const calls = replies(t, [prose])
     const report = await askAdvisorReport(question, context, undefined, options)
-    assert.equal(report.explanation, prose)
+    assert.equal(report.answer, prose)
+    assert.equal(report.answerSource, 'ai')
     assert.equal(report.explanationStatus, 'checked')
     assert.deepEqual(report.explanationAttempts, [{ reasons: [] }])
     assert.equal(calls(), 1)
   })
 }
 test('one retry recovers the actual explanation without returning rejected text', async (t) => {
-  const valid = 'Dining may be worth reviewing. Consider planning meals before restaurant visits. Coverage is unverified.'
+  const valid = 'Dining may be worth reviewing: it is 10.00 USD of imported outflows. Consider planning meals before restaurant visits.'
   const calls = replies(t, ['Spend $500.', valid])
   const report = await askAdvisorReport('Suggest budgeting improvements', context, undefined, options)
   assert.equal(calls(), 2)
-  assert.equal(report.explanation, valid)
+  assert.equal(report.answer, valid)
   assert.equal(report.explanationStatus, 'checked')
-  assert.deepEqual(report.explanationAttempts, [{ reasons: ['numeric_claim', 'missing_grounding'] }, { reasons: [] }])
+  assert.ok(report.explanationAttempts![0].reasons.includes('ungrounded_number'))
+  assert.deepEqual(report.explanationAttempts![1], { reasons: [] })
 })
 test('second rejection stops and retains verified figures and reason codes', async (t) => {
   const calls = replies(t, ['Spend $500.', 'Your income is steady.'])
   const report = await askAdvisorReport('Suggest improvements', context, undefined, options)
   assert.equal(calls(), 2)
   assert.equal(report.explanationStatus, 'withheld')
+  assert.equal(report.answerSource, 'app')
   assert.equal(report.figures[0].outflowCents, 1000)
   assert.equal(report.explanationAttempts?.length, 2)
-  assert.match(report.explanation, /Dining/)
-  assert.match(report.explanation, /Application-generated fallback \(not AI-generated\)/)
-  assert.match(report.explanation, /Plan restaurant visits/)
-  assert.doesNotMatch(report.explanation, /500|steady/)
+  assert.match(report.answer, /Dining/)
+  assert.match(report.answer, /Plan restaurant visits/)
+  assert.doesNotMatch(report.answer, /500|steady/)
 })
-test('numeric, balance and missing-data answers do not call inference', async (t) => {
+test('balance and missing-data answers do not call inference; numeric questions get a grounded answer', async (t) => {
   const original = globalThis.fetch
   t.after(() => { globalThis.fetch = original })
   globalThis.fetch = (async () => { assert.fail('No generation expected') }) as typeof fetch
-  for (const question of ['How much did I spend in November 2026?', 'Compare October and November 2026', 'What is my balance?', 'Suggest a budget for January 2026']) {
+  for (const question of ['What is my balance?', 'Suggest a budget for January 2026', 'How much did I spend in January 2027?']) {
     const report = await askAdvisorReport(question, context, undefined, options)
     assert.equal(report.explanationStatus, 'not_requested')
     assert.equal(report.explanationAttempts, undefined)
+    assert.ok(report.answer)
   }
 })
 test('retry shares the total deadline and preserves figures on timeout', async (t) => {
@@ -125,7 +128,8 @@ test('retry shares the total deadline and preserves figures on timeout', async (
   const report = await askAdvisorReport('Suggest improvements', context, undefined, { ...options, timeoutMs: 30 })
   assert.equal(calls, 2)
   assert.equal(report.explanationStatus, 'unavailable')
-  assert.match(report.explanation, /timed out/)
+  assert.match(report.unavailableReason!, /timed out/)
+  assert.match(report.answer, /10\.00 USD/)
   assert.equal(report.figures[0].outflowCents, 1000)
 })
 

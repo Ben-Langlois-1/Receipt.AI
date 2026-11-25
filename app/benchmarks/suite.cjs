@@ -8,6 +8,9 @@ const datasets = {
   gap: [...month('09', [900,120,160,80,70,40]), ...month('11', [900,180,190,150,80,50])],
   ambiguous: [...month('11', [800,100,250,150,100,30]), {date:'2026-11-10',amount:1200,currency:'USD',category:'Transfers'}, {date:'2026-11-11',amount:60,currency:'USD',category:'Refund'}, {date:'2026-11-12',amount:90,currency:'USD',category:'Reimbursement'}],
   commuting: month('11', [1000,150,200,100,450,80]),
+  // Canonical form of the complete fixtures/banks/chase-checking.csv ledger: eight outflow
+  // categories (Housing dominant and essential, every other category minor) and two inflows.
+  chaseChecking: [['2026-01-03',-15.99,'Subscriptions'],['2026-01-05',2450,'Income'],['2026-01-06',-86.42,'Groceries'],['2026-01-07',-42.18,'Transport'],['2026-01-09',-62.10,'Utilities'],['2026-01-11',-6.45,'Dining'],['2026-01-15',-1400,'Housing'],['2026-01-20',-2.50,'Fees'],['2026-01-21',-34.12,'Shopping'],['2026-02-03',-15.99,'Subscriptions'],['2026-02-05',2450,'Income'],['2026-02-15',-1400,'Housing']].map(([date, amount, category]) => ({ date, amount, currency: 'USD', category })),
 }
 const cases = [
   {id:'M01',dataset:'balanced',kind:'model',question:'What should I do to improve my spending habits?',required:['Uncategorized','Dining','Groceries','Subscriptions']},

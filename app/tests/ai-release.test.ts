@@ -27,9 +27,13 @@ test('protected categories are excluded from plans and advice contradicting them
   assert.ok(checkRecommendationPlan('Dining: plan meals. Transport: compare cheaper options.', plan).includes('constraint_violation'))
   assert.deepEqual(checkRecommendationPlan('Dining: plan meals. Keep Housing unchanged. Do not reduce Transport.', plan), [])
 })
-test('category comparison uses its own cents delta and percentage, not the all-category headline', async () => {
+test('category comparison uses its own cents delta and percentage, not the all-category headline', async (t) => {
+  const original = globalThis.fetch
+  t.after(() => { globalThis.fetch = original })
+  globalThis.fetch = (async () => { throw Error('offline') }) as typeof fetch
   const report = await askAdvisorReport('Compare Dining in October and November 2026.', context, undefined, { now: new Date('2026-11-23T12:00:00Z') })
-  assert.equal(report.explanationStatus, 'not_requested')
+  assert.equal(report.explanationStatus, 'unavailable')
+  assert.equal(report.answer, 'Dining imported outflows were 300.00 USD in 2026-11 versus 220.00 USD in 2026-10: +80.00 USD (+36.36%).')
   assert.deepEqual(report.comparisons.map(c => ({ category: c.category, differenceCents: c.differenceCents, percentageChange: c.percentageChange })), [{ category: 'Dining', differenceCents: 8000, percentageChange: 36.36 }])
   const legacy = renderPeriodFacts(query('Compare Dining in October and November 2026.'), 'Compare Dining in October and November 2026.')
   assert.match(legacy, /Dining: imported outflow difference 80.00 USD/)

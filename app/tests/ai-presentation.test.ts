@@ -14,8 +14,8 @@ function mock(t: TestContext, content: string, finish = 'stop') {
   t.after(() => { globalThis.fetch = original })
   globalThis.fetch = (async (_url, init) => {
     const body = JSON.parse(String(init?.body))
-    assert.ok(body.messages[0].content.includes('Presentation mode'))
-    assert.ok(body.messages[0].content.includes('conditional, qualitative budgeting'))
+    assert.ok(body.messages[0].content.includes('Answer the user\'s question directly'))
+    assert.ok(body.messages[1].content.startsWith('Verified facts JSON'))
     assert.ok(!String(init?.body).includes('SECRET'))
     assert.ok(body.messages[1].content.endsWith('/no_think'))
     return new Response(JSON.stringify({ choices: [{ finish_reason: finish, message: { content } }] }))
@@ -32,7 +32,7 @@ test('safe Markdown uses semantic elements and never executes HTML or links', ()
   assert.ok(!html.includes('<a '))
 })
 test('monthly recommendations use local model while verified figures stay independent', async (t) => {
-  mock(t, '**Review Dining**\n- Consider tracking discretionary purchases before choosing a budget.\n- Check category labels first.')
+  mock(t, 'In 2026-11 your only imported outflow category is **Dining**, at 15.00 USD.\n- Consider tracking dining purchases before choosing a budget.\n- Check category labels first.')
   const report = await askAdvisorReport('Suggest a budget for November 2026', context, undefined, options)
   assert.equal(report.explanationStatus, 'checked')
   assert.equal(report.figures[0].outflowCents, 1500)
@@ -45,14 +45,14 @@ test('monthly recommendations use local model while verified figures stay indepe
   assert.match(html, /Outflows<\/dt><dd>15.00 USD/)
   assert.match(html, /Inflows<\/dt><dd>30.00 USD/)
   assert.match(html, /AI-generated/)
-  assert.match(html, /<strong>Review Dining<\/strong>/)
+  assert.match(html, /<strong>Dining<\/strong>/)
 })
-for (const prose of ['Spend $999.', 'Your balance is healthy.', 'Your income is steady.', 'You can afford a purchase.', 'Dining rose last month.', 'November was expensive.', 'You will save money.', 'I updated your budget.', 'You have a subscription.', 'Set aside fifty dollars.', 'Dining increased by 50%.']) {
+for (const prose of ['Spend $999.', 'Your balance is healthy.', 'Your income is steady.', 'You can afford a purchase.', 'Dining rose last month.', 'December 2026 was expensive.', 'You will save money.', 'I updated your budget.', 'You have a subscription.', 'Set aside fifty dollars.', 'Dining increased by 50%.']) {
   test(`withholds unsupported claim: ${prose}`, async (t) => {
     mock(t, prose)
     const report = await askAdvisorReport('Explain my spending', context, undefined, options)
     assert.equal(report.explanationStatus, 'withheld')
-    assert.ok(!report.explanation.includes(prose))
+    assert.ok(!report.answer.includes(prose))
     assert.equal(report.figures[0].outflowCents, 2500)
   })
 }
@@ -74,7 +74,8 @@ test('bad completion retains verified figures and indicates explanation failure'
   mock(t, 'incomplete', 'length')
   const report = await askAdvisorReport('Explain November 2026', context, undefined, options)
   assert.equal(report.explanationStatus, 'unavailable')
-  assert.match(report.explanation, /truncated/)
+  assert.match(report.unavailableReason!, /truncated/)
+  assert.match(report.answer, /15\.00 USD/)
   assert.equal(report.figures[0].outflowCents, 1500)
 })
 test('comparison panel preserves scope and currency separation', async (t) => {
@@ -99,9 +100,7 @@ test('all-time figures display both date bounds and cancellation is preserved', 
 })
 
 test('future-dated imported records are prominent and remain explicitly scoped', async (t) => {
-  const original = globalThis.fetch
-  t.after(() => { globalThis.fetch = original })
-  globalThis.fetch = (async () => { assert.fail('No inference expected') }) as typeof fetch
+  mock(t, 'Your imported outflows were 45.00 USD, all in Dining.')
   const future = buildAdvisorContext([row('2026-11-20', -10), row('2026-12-01', -15), row('2026-12-23', -20)])
   const report = await askAdvisorReport('How much did I spend?', future, undefined, options)
   assert.deepEqual(report.futureDatedRecords, { transactions: 2, earliest: '2026-12-01', latest: '2026-12-23' })

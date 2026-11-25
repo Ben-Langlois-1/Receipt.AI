@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { buildAdvisorContext } from '../src/ai/financial-context.ts'
 import { queryFinancialFacts } from '../src/ai/financial-facts.ts'
 import { buildRecommendationPlan, checkRecommendationPlan } from '../src/ai/recommendation-plan.ts'
-import { needsExplanation } from '../src/ai/advisor-report.ts'
+import { classifyIntent } from '../src/ai/advisor-answer.ts'
 import { assessExplanation } from '../src/ai/explanation-policy.ts'
 import { reportToPlainText } from '../src/ai/advisor-presentation.ts'
 import type { AdvisorReport } from '../src/ai/advisor-report.ts'
@@ -18,10 +18,10 @@ function planFor(question: string) {
   assert.ok(!('error' in query))
   return buildRecommendationPlan(query, question)
 }
-test('save-more questions are recommendations, numeric comparisons stay deterministic', () => {
-  assert.equal(needsExplanation('How can I save more money without changing my housing costs?'), true)
-  assert.equal(needsExplanation('How can I spend less?'), true)
-  assert.equal(needsExplanation('Compare October and November 2026.'), false)
+test('save-more questions are recommendations; comparisons are routed for explanation, not skipped', () => {
+  assert.equal(classifyIntent('How can I save more money without changing my housing costs?'), 'advice')
+  assert.equal(classifyIntent('How can I spend less?'), 'advice')
+  assert.equal(classifyIntent('Compare October and November 2026.'), 'comparison')
 })
 test('review plan investigates unknown labels then prioritizes feasible categories using existing totals', () => {
   const plan = planFor('How can I save more money without changing my housing costs?')
@@ -47,11 +47,12 @@ test('plain report serialization includes category amounts and codes without dep
   const report: AdvisorReport = {
     asOfDate: '2026-11-22', timezone: 'America/Detroit', figures: [{ period: 'All imported records', startInclusive: '2026-11-01', endExclusive: '', endInclusive: '2026-11-01', currency: 'USD', coverage: 'unknown', transactions: 6,
       outflowCents: 200000, inflowCents: 0, netFlowCents: -200000, categories: [{ category: 'Dining', outflowCents: 30000 }] }],
-    comparisons: [], notice: 'Coverage unverified.', explanation: 'Consider reviewing Dining.', explanationStatus: 'checked', explanationAttempts: [{ reasons: ['unknown_category'] }, { reasons: [] }],
+    comparisons: [], notice: 'Coverage unverified.', answer: 'Consider reviewing Dining.', answerSource: 'ai', explanationStatus: 'checked', explanationAttempts: [{ reasons: ['unknown_category'] }, { reasons: [] }],
   }
   const text = reportToPlainText(report)
+  assert.match(text, /^Answer\nConsider reviewing Dining\./)
   assert.match(text, /Dining: 300.00 USD/)
-  assert.match(text, /Attempt 1: unknown_category/)
-  assert.match(text, /Attempt 2: accepted/)
+  assert.match(text, /attempt 1: unknown_category/)
+  assert.match(text, /attempt 2: accepted/)
   assert.doesNotMatch(text, /^-\s*$/m)
 })
