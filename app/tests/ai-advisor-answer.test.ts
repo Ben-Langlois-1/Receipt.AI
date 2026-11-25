@@ -148,6 +148,12 @@ test('deterministic answers directly address the exact questions', () => {
   const where = deterministicAnswer(factsFor(housing, 'Where did most of my money go?'))
   assert.match(where, /^Most of your imported outflows went to Housing: 2800\.00 USD, 91\.33% of 3065\.75 USD \(all imported records, 2026-01-03 through 2026-02-15\)/)
   assert.match(where, /Groceries \(86\.42 USD, 2\.82%\), Utilities \(62\.10 USD, 2\.03%\) and Transport \(42\.18 USD, 1\.38%\), plus 4 smaller categories/)
+  // Your data: the combined remainder (8.67%) really is small.
+  assert.match(where, /The rest is much smaller: Groceries/)
+  // Balanced data: each category is smaller than Housing, but together they are 38.46%.
+  const balancedWhere = deterministicAnswer(factsFor(balanced, 'Where did most of my money go?'))
+  assert.equal(balancedWhere, 'Most of your imported outflows went to Housing: 2400.00 USD, 61.54% of 3900.00 USD (all imported records, 2026-10-01 through 2026-11-10). Each other category is much smaller, but together they are 1500.00 USD (38.46%). The largest were: Dining (520.00 USD, 13.33%), Groceries (380.00 USD, 9.74%) and Uncategorized (320.00 USD, 8.21%), plus 2 smaller categories.')
+  assert.doesNotMatch(balancedWhere, /The rest is much smaller/)
   const compare = deterministicAnswer(factsFor(balanced, 'Compare the latest two months of spending.'))
   assert.match(compare, /2000\.00 USD in 2026-11 versus 1900\.00 USD in 2026-10: \+100\.00 USD \(\+5\.26%\)/)
   assert.match(compare, /largest increase was Dining \(\+80\.00 USD, \+36\.36%\)/)

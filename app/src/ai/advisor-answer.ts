@@ -238,7 +238,9 @@ export function deterministicAnswer(facts: AnswerFacts): string {
     if (facts.intent === 'breakdown') {
       const first = `${prefix}Most of your imported outflows went to ${top.category}: ${top.outflows}, ${top.share} of ${c.totals.outflows} (${c.scope}).`
       const next = rest.slice(0, 3)
-      parts.push(next.length ? `${first} ${top.tier === 'dominant' ? 'The rest is much smaller' : 'Next were'}: ${list(next.map(describe))}${rest.length > 3 ? `, plus ${rest.length - 3} smaller ${rest.length - 3 === 1 ? 'category' : 'categories'}` : ''}.` : first)
+      // Individually smaller is not the same as a small combined share (38.46% is not "much smaller").
+      const lead = top.tier !== 'dominant' ? 'Next were' : top.shareHundredths >= 8000 || !c.remainderAfterLargest ? 'The rest is much smaller' : `Each other category is much smaller, but together they are ${c.remainderAfterLargest.outflows} (${c.remainderAfterLargest.share}). The largest were`
+      parts.push(next.length ? `${first} ${lead}: ${list(next.map(describe))}${rest.length > 3 ? `, plus ${rest.length - 3} smaller ${rest.length - 3 === 1 ? 'category' : 'categories'}` : ''}.` : first)
       continue
     }
     parts.push(`${prefix}For ${c.scope}, imported outflows were ${c.totals.outflows} and inflows ${c.totals.inflows} (net cash flow ${c.totals.netCashFlow}). The largest category was ${describe(top)}.`)
