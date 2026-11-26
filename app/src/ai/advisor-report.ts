@@ -1,6 +1,7 @@
 import { buildRecommendationPlan } from './recommendation-plan.ts'
 import { assessExplanation, normalizeUserAmountDisclaimer } from './explanation-policy.ts'
-import { assessAnswer, buildAnswerFacts, deterministicAnswer, retryFeedback, shareOf, formatHundredths, type AdvisorIntent, type AnswerRejection } from './advisor-answer.ts'
+import { assessAnswer, buildAnswerFacts, deterministicAnswer, shareOf, formatHundredths, type AdvisorIntent, type AnswerRejection } from './advisor-answer.ts'
+import { buildRetryFeedback } from './advisor-retry.ts'
 import type { AdvisorContext } from './financial-context.ts'
 import { ADVISOR_TIMEZONE, BALANCE_LIMITATION, calendarDate, queryFinancialFacts } from './financial-facts.ts'
 import { DEFAULT_AI_TIMEOUT_MS, TruncatedAdvisorResponseError, answerLocalAdvisor, withLocalAdvisorDeadline, type AdvisorOptions } from './local-advisor.ts'
@@ -96,7 +97,7 @@ export async function askAdvisorReport(question: string, context: AdvisorContext
         } catch (error) {
           if (!(error instanceof TruncatedAdvisorResponseError)) throw error
           report.explanationAttempts!.push({ reasons: ['truncated_response'] })
-          feedback = 'Your previous answer was too long. Answer in at most 4 short sentences.'
+          feedback = buildRetryFeedback(['truncated_response'], facts)
           if (attempt === 0 && !deadlineSignal.aborted) continue
           throw error
         }
@@ -109,7 +110,7 @@ export async function askAdvisorReport(question: string, context: AdvisorContext
           report.explanationStatus = 'checked'
           return
         }
-        feedback = retryFeedback(reasons)
+        feedback = buildRetryFeedback(reasons, facts)
       }
       report.explanationStatus = 'withheld'
     })

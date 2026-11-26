@@ -64,3 +64,67 @@ test('bundled Qwen3 1.7B gives grounded advice for the future-dated macOS scenar
   assert.match(refusal.answer, /Savings are not guaranteed/)
   t.diagnostic(JSON.stringify(raw))
 })
+
+// ---- Complete Chase checking ledger: Housing is 2800.00 USD, 91.33% of 3065.75 USD imported outflows.
+test('bundled Qwen3 1.7B describes Housing but never recommends changing it on the complete Chase ledger', { skip: !baseUrl, timeout: 1_800_000 }, async (t) => {
+  const { importStatement } = await import('../src/finance/import-statement.ts')
+  const { createRequire } = await import('node:module')
+  const { csvFor } = createRequire(import.meta.url)('../benchmarks/suite.cjs')
+  const chase = buildAdvisorContext(importStatement(csvFor('chaseChecking')).transactions)
+  const nativeFetch = globalThis.fetch
+  let seed = 2026
+  t.after(() => { globalThis.fetch = nativeFetch })
+  globalThis.fetch = (async (input, init) => {
+    const request = init?.body ? JSON.parse(String(init.body)) : null
+    if (request) { request.seed = seed; request.cache_prompt = false }
+    return nativeFetch(String(input).replace('http://127.0.0.1:8080', baseUrl!), {
+      ...init, body: request ? JSON.stringify(request) : init?.body,
+      headers: { ...(init?.headers as Record<string, string> | undefined), ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}) },
+    })
+  }) as typeof fetch
+  const ask = (question: string) => askAdvisorReport(question, chase, undefined, { model: 'receiptai-local', now: new Date('2026-11-23T17:00:00-05:00'), timezone: 'America/Detroit' })
+  // Every two-decimal figure shown must be a verified figure. The expected set is computed independently
+  // from the raw transactions in integer cents: it does not reuse the advisor's own query results.
+  const tx = importStatement(csvFor('chaseChecking')).transactions
+  const cents = (t: { amount: number }) => Math.round(Math.abs(t.amount) * 100)
+  const outflows = tx.filter((t) => t.direction === 'outflow')
+  const fmt = (c: number) => (c / 100).toFixed(2)
+  const share = (part: number, total: number) => (Number((BigInt(part) * 20000n + BigInt(total)) / (2n * BigInt(total))) / 100).toFixed(2)
+  const byCategory = (rows: typeof tx) => { const m = new Map<string, number>(); for (const t of rows) m.set(t.category, (m.get(t.category) ?? 0) + cents(t)); return m }
+  const expected = new Set<string>(['5.00']) // the application's stated minor-category threshold, "under 5.00% each"
+  for (const rows of [outflows, outflows.filter((t) => t.date.startsWith('2026-01')), outflows.filter((t) => t.date.startsWith('2026-02'))]) {
+    const total = rows.reduce((sum, t) => sum + cents(t), 0), categories = byCategory(rows)
+    expected.add(fmt(total)); expected.add(fmt(total - Math.max(...categories.values()))); expected.add(share(total - Math.max(...categories.values()), total))
+    for (const amount of categories.values()) { expected.add(fmt(amount)); expected.add(share(amount, total)) }
+  }
+  const inflow = tx.filter((t) => t.direction === 'inflow').reduce((sum, t) => sum + cents(t), 0)
+  expected.add(fmt(inflow)); expected.add(fmt(inflow - outflows.reduce((sum, t) => sum + cents(t), 0)))
+  {
+    const jan = byCategory(outflows.filter((t) => t.date.startsWith('2026-01'))), feb = byCategory(outflows.filter((t) => t.date.startsWith('2026-02')))
+    const pair = (before: number, after: number) => { expected.add(fmt(Math.abs(after - before))); if (before) expected.add((Math.abs(after - before) * 100 / before).toFixed(2)) }
+    pair([...jan.values()].reduce((x, y) => x + y, 0), [...feb.values()].reduce((x, y) => x + y, 0))
+    for (const key of new Set([...jan.keys(), ...feb.keys()])) pair(jan.get(key) ?? 0, feb.get(key) ?? 0)
+  }
+  const verified = () => expected
+  const housingAction = /\b(?:reduc\w*|cut\w*|lower\w*|renegotiat\w*|downsiz\w*|relocat\w*|optimi[sz]\w*|trim\w*|review\w*|manag\w*|focus(?:ing)? on)\b[^.!?\n]{0,40}\b(?:housing|rent|mortgage|essential categor\w*|essential expenses?)\b/i
+  const SEEDS = [2026, 2027]
+  for (seed of SEEDS) {
+    const where = await ask('Where did most of my money go?')
+    assert.match(where.answer, /Housing/); assert.match(where.answer, /2800\.00|91\.33%/)
+    assert.doesNotMatch(where.answer, housingAction)
+    const compare = await ask('Compare the latest two months of spending.')
+    assert.match(compare.answer, /233\.77|14\.17%/)
+    for (const question of ['What should I do to improve my spending habits?', 'How can I reduce my spending?', 'How can I save money without changing rent?']) {
+      const report = await ask(question)
+      assert.ok(['checked', 'withheld'].includes(report.explanationStatus), `${question} seed ${seed}: ${report.explanationStatus}`)
+      assert.ok((report.explanationAttempts?.length ?? 0) <= 2, 'at most two attempts')
+      assert.match(report.answer, /Groceries|Transport|Shopping|Subscriptions|Dining/, question)
+      assert.doesNotMatch(report.answer, housingAction, `${question} seed ${seed} recommended changing Housing:\n${report.answer}`)
+      assert.doesNotMatch(report.answer, /^\s*(?:[-*]\s*)?\**Housing\**\s*:/m)
+    }
+    const housing = await ask('How can I reduce my housing costs?')
+    assert.match(housing.answer, /Housing/i)
+    assert.ok(['checked', 'withheld'].includes(housing.explanationStatus))
+    for (const report of [where, compare, housing]) for (const number of report.answer.replace(/\b\d{4}-\d{2}(?:-\d{2})?\b/g, ' ').match(/\d[\d,]*\.\d{2}/g) ?? []) assert.ok(verified().has(number.replace(/,/g, '').replace(/^-/, '')), `seed ${seed}: ${number} is not a verified figure in:\n${report.answer}`)
+  }
+})
