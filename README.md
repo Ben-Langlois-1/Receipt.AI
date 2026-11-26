@@ -4,7 +4,7 @@ Receipt.AI is a university software engineering project for private desktop fina
 
 ## Local AI and privacy
 
-The React/TypeScript interface runs inside Electron. Financial totals, date interpretation, category comparisons and percentages are calculated deterministically in TypeScript. Qwen3 explains the verified facts and suggests qualitative actions; its text is screened before display. Verified figures stay visible separately, including reporting periods and missing-data limitations.
+The React/TypeScript interface runs inside Electron. Financial totals, date interpretation, category comparisons, rankings and percentages are calculated deterministically in TypeScript from integer cents. For every question AI Advisor builds a set of verified answer facts; Qwen3 explains those facts conversationally and suggests qualitative actions. Each answer is checked against the facts before display (figures, months, categories, rankings, directions and shares), and answers that claim income, balances or guaranteed savings, or that suggest changing categories you asked to keep unchanged or essential categories such as Housing, are rejected. A rejected answer is retried once, then replaced by a direct answer built from the same facts. Verified figures stay available separately, including reporting periods and missing-data limitations.
 
 The desktop candidate bundles **Qwen3 1.7B Q4_K_M** and a CPU-only **llama.cpp** runtime. Electron manages an authenticated loopback connection and stops its owned inference process when the application closes. Financial data and inference stay on the computer; no external AI service or separate model download is required. Imported data persists in the local desktop profile. Files are not application-encrypted, and a browser development profile is separate from the desktop profile.
 
@@ -12,7 +12,7 @@ The desktop candidate bundles **Qwen3 1.7B Q4_K_M** and a CPU-only **llama.cpp**
 
 **For regular users:** the packaged application already includes the Qwen3 1.7B Q4_K_M model, native llama.cpp executable and required bundled runtime libraries. It loads the model automatically; there is no manual AI setup. Do not run the developer commands below to install the packaged application.
 
-The current classroom candidate is **1.0.0-rc.2**. Obtain the tested Linux package from the project team. Installers and model weights are not committed to Git, and this README does not advertise a public download release.
+The current classroom candidate is **1.0.0-rc.3**. Obtain the matching package from the project team; Linux is the platform with manual, locally recorded runtime testing. Installers and model weights are not committed to Git, and this README does not advertise a public download release.
 
 On **Fedora Linux x64**:
 
@@ -28,12 +28,14 @@ See [installation and first-use instructions](docs/installation.md) for platform
 
 | Platform | Evidence for this candidate |
 | --- | --- |
-| Fedora Linux x64 | AppImage and RPM built; real packaged inference, offline first launch, persistence and cleanup tested. RPM installation and upgrade tested in an isolated Fedora environment. |
-| Ubuntu Linux x64 | Native CI AppImage build and offline packaged acceptance passed. |
-| Windows x64 | Native installer built and silent installation completed; packaged runtime/inference verification remains incomplete. |
-| macOS Apple Silicon / Intel | Native DMG/ZIP packages built and DMG applications copied; packaged runtime/inference verification remains incomplete. |
+| Fedora Linux x64 | AppImage and RPM built and manually tested locally for the earlier rc.2 packages: real packaged inference, offline first launch, persistence, cleanup, and RPM installation/upgrade in an isolated Fedora environment. rc.3 Linux packages have not been rebuilt locally. |
+| Ubuntu Linux x64 | Native CI builds the AppImage and runs offline first-launch acceptance with real inference. |
+| Windows x64 | Native CI builds the NSIS installer, installs it, restricts application networking and runs packaged acceptance with real inference. |
+| macOS Apple Silicon / Intel | Native CI builds the DMG/ZIP, installs the DMG, restricts application networking and runs packaged acceptance with real inference. |
 
-**Linux is runtime-verified in the environments listed above; Windows/macOS are pending packaged runtime verification.** Windows/macOS work is deferred. These builds do not establish verified runtime support. Packages are unsigned classroom previews, not signed/notarized public releases. Approximately 8 GB RAM is a target supported by constrained Linux testing, not a verified physical minimum specification. See the [release validation report](docs/release/validation.md) for evidence, checksums and remaining distribution requirements.
+All four native CI jobs passed on the commit before the AI Advisor redesign (run 45311769512). After the redesign, Ubuntu, Windows and macOS Apple Silicon passed (run 45541853553); the macOS Intel job failed on an over-strict case-sensitive test assertion about the model's wording, which rc.3 corrects. The results for the rc.3 release commit are recorded in its own CI run, not asserted here. See the [release validation report](docs/release/validation.md) for the exact evidence, checksums and limits.
+
+CI results come from disposable GitHub-hosted runners, not manual testing on physical Windows or macOS computers. Packages are unsigned classroom previews, not signed/notarized public releases, and have not been evaluated against Windows SmartScreen or macOS Gatekeeper. Approximately 8 GB RAM is a target supported by constrained Linux testing, not a verified physical minimum specification.
 
 ## Run or build from source
 

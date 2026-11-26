@@ -1,6 +1,6 @@
 # Desktop build and release guide
 
-This guide covers developer build/release work for **1.0.0-rc.2**. For end-user setup use [installation](../installation.md). The [validation report](validation.md) is the authority for what was actually tested. Linux is the validated classroom candidate; Windows/macOS packaged runtime validation is deferred. Do not infer support from build configuration alone.
+This guide covers developer build/release work for **1.0.0-rc.3**. For end-user setup use [installation](../installation.md). The [validation report](validation.md) is the authority for what was actually tested. Linux has manual local evidence (rc.2 packages) and native CI; Windows and macOS have native CI evidence only, from disposable runners with unsigned packages. Do not infer signed-release or physical-hardware support from build configuration alone.
 
 All commands below use the repository root or explicitly enter `app/`. Build-time downloads require internet access; packaged application startup does not.
 
@@ -63,7 +63,7 @@ node scripts/write-checksums.cjs
 
 The source-collection steps also require Python 3 and use the Docker builder prepared above. They retain the required corresponding-source materials for distribution. Packaging can fetch pinned packaging tools; it does not fetch the GGUF or compile llama.cpp. Build-time downloads require network access; the finished application does not.
 
-Outputs are `app/release/Receipt.AI-1.0.0-rc.2-linux-x86_64.AppImage`, the matching `.rpm`, and `linux-unpacked/`. Distribute the installer with its checksum and the required `release/sources/` archives. The model and native runtime are included outside `app.asar` under packaged `resources/models/` and `resources/native/<platform>-<arch>/`, together with licensing materials. Users of these complete packages do not install Node.js or manually set up AI.
+Outputs are `app/release/Receipt.AI-1.0.0-rc.3-linux-x86_64.AppImage`, the matching `.rpm`, and `linux-unpacked/`. Distribute the installer with its checksum and the required `release/sources/` archives. The model and native runtime are included outside `app.asar` under packaged `resources/models/` and `resources/native/<platform>-<arch>/`, together with licensing materials. Users of these complete packages do not install Node.js or manually set up AI.
 
 Matching libstdc++/libgcc runtime libraries accompany the native executable; glibc and desktop GUI libraries remain OS prerequisites. Electron/Chromium impose their own OS/CPU requirements. Fedora/Ubuntu validation does not prove compatibility with every Linux distribution or old processor. The AppImage uses pinned static-runtime toolset `1.0.3`; Linux user namespaces must be available, and the app rejects `--no-sandbox`. Hosts disallowing FUSE can use the runtime's extract-and-run mode. Runtime download/update code is not included.
 
