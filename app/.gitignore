@@ -22,3 +22,11 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Local inference assets and private/generated test profiles
+/build/
+/release/
+/resources/native/
+/resources/models/*.gguf
+/artifacts/
+/artifacts-package-inventory.json

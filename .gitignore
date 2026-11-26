@@ -1,0 +1,30 @@
+# Build-time model cache and local-only inference assets
+/approved-model/
+/build/
+/dist/
+/release/
+/artifacts/
+*.gguf
+*.ggml
+*.safetensors
+
+# Generated application output, installers, caches and test evidence
+node_modules/
+.cache/
+playwright-report/
+test-results/
+coverage/
+__pycache__/
+*.pyc
+*.tsbuildinfo
+*.AppImage
+*.rpm
+*.deb
+*.dmg
+*.exe
+*.dll
+Receipt.AI-*.zip
+*.log
+*.tmp
+*.bak
+.DS_Store

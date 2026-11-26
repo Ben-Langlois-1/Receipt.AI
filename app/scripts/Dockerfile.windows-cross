@@ -1,0 +1,3 @@
+# Optional Linux cross-build. Native Windows CI remains the runtime authority.
+FROM ubuntu:24.04
+RUN apt-get update && apt-get install -y --no-install-recommends cmake ninja-build ca-certificates g++-mingw-w64-x86-64-posix && rm -rf /var/lib/apt/lists/*

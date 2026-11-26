@@ -1,0 +1,159 @@
+name: Desktop native build and packaged tests
+on:
+  workflow_dispatch:
+    inputs:
+      model_url:
+        description: Optional HTTPS override for the approved GGUF; otherwise use the unpublished CI model fixture
+        required: false
+        type: string
+permissions:
+  contents: read
+jobs:
+  approved-model:
+    runs-on: ubuntu-22.04
+    # GitHub restricts draft release visibility to repository writers. This
+    # isolated job only downloads the unpublished approved model and checks its
+    # hash; all native build/inference jobs below retain read-only permissions.
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/cache/restore@v4
+        id: model-cache
+        with:
+          path: approved-model
+          key: receiptai-qwen3-d2387ca2dbfee2ffabce7120d3770dadca0b293052bc2f0e138fdc940d9bc7b5
+          enableCrossOsArchive: true
+      - name: Retrieve the approved CI model fixture
+        if: steps.model-cache.outputs.cache-hit != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MODEL_URL: ${{ inputs.model_url || vars.RECEIPTAI_MODEL_URL }}
+        run: |
+          mkdir -p approved-model
+          if [ -n "$MODEL_URL" ]; then
+            curl --fail --location --proto '=https' --proto-redir '=https' "$MODEL_URL" -o approved-model/Qwen3-1.7B-Q4_K_M.gguf
+          else
+            gh release download receiptai-ci-approved-qwen3-1.7b --repo "$GITHUB_REPOSITORY" --pattern Qwen3-1.7B-Q4_K_M.gguf --dir approved-model
+          fi
+          echo 'd2387ca2dbfee2ffabce7120d3770dadca0b293052bc2f0e138fdc940d9bc7b5  approved-model/Qwen3-1.7B-Q4_K_M.gguf' | sha256sum --check --status
+      - uses: actions/cache/save@v4
+        if: steps.model-cache.outputs.cache-hit != 'true'
+        with:
+          path: approved-model
+          key: receiptai-qwen3-d2387ca2dbfee2ffabce7120d3770dadca0b293052bc2f0e138fdc940d9bc7b5
+          enableCrossOsArchive: true
+  native-package:
+    needs: approved-model
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            arch: x64
+          - os: windows-2022
+            arch: x64
+          - os: macos-15
+            arch: arm64
+          - os: macos-15-intel
+            arch: x64
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: app
+        shell: bash
+    env:
+      NATIVE_ARCH: ${{ matrix.arch }}
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - run: npm ci
+      - name: Get pinned public native source
+        run: |
+          mkdir -p build/llama-source
+          curl --fail --location https://github.com/ggml-org/llama.cpp/archive/60ef23d6.tar.gz -o build/llama-source.tar.gz
+          node -e "const fs=require('node:fs'),crypto=require('node:crypto');const actual=crypto.createHash('sha256').update(fs.readFileSync('build/llama-source.tar.gz')).digest('hex');if(actual!=='e5098798bd11b68a4e9f5cf575a3a6db24c769db81a14a3d060a08c6c4a4edb5')throw Error('Native source checksum mismatch')"
+          tar -xzf build/llama-source.tar.gz -C build/llama-source --strip-components=1
+      - name: Native CPU-only build (Windows/macOS)
+        if: runner.os != 'Linux'
+        run: node scripts/build-native.cjs
+      - name: Portable CPU-only Linux native build
+        if: runner.os == 'Linux'
+        run: bash scripts/build-linux-container.sh
+      - uses: actions/cache/restore@v4
+        with:
+          path: approved-model
+          key: receiptai-qwen3-d2387ca2dbfee2ffabce7120d3770dadca0b293052bc2f0e138fdc940d9bc7b5
+          enableCrossOsArchive: true
+          fail-on-cache-miss: true
+      - name: Copy exact approved cached model into package resources
+        run: |
+          mkdir -p resources/models
+          cp ../approved-model/Qwen3-1.7B-Q4_K_M.gguf resources/models/
+      - name: Stage native libraries and notices
+        run: |
+          export NATIVE_BIN_DIR="$PWD/build/native/$(node -p process.platform)-${NATIVE_ARCH}/bin"
+          if [ "$RUNNER_OS" = Linux ]; then export NATIVE_BIN_DIR="$PWD/build/native/linux-x64"; fi
+          node scripts/stage-resources.cjs
+      - name: Corresponding Linux runtime source archive
+        if: runner.os == 'Linux'
+        run: |
+          bash scripts/collect-runtime-sources.sh
+          python3 scripts/collect-appimage-sources.py
+      - name: Complete regression suite
+        run: npm test
+      - run: npm run lint
+      - name: Linux desktop test dependencies
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y xvfb libgtk-3-0 libnss3 libasound2 libgbm1
+      - run: npm run build
+      - name: Build platform installer (Linux)
+        if: runner.os == 'Linux'
+        run: npm run package:linux
+      - name: Build platform installer (Windows)
+        if: runner.os == 'Windows'
+        run: npx electron-builder --config electron-builder.cjs --win nsis --x64
+      - name: Build platform installer (macOS)
+        if: runner.os == 'macOS'
+        run: npx electron-builder --config electron-builder.cjs --mac dmg zip --${NATIVE_ARCH}
+      - name: Inspect Linux packaged resources
+        if: runner.os == 'Linux'
+        run: node scripts/verify-package.cjs release/linux-unpacked > artifacts-package-inventory.json
+      - name: Offline first-launch acceptance using finished AppImage
+        if: runner.os == 'Linux'
+        run: bash scripts/test-desktop-linux.sh --offline
+      - name: Install and test native Windows/macOS package offline
+        if: runner.os != 'Linux'
+        run: node scripts/test-installed.cjs
+      - name: Hash final artifacts
+        if: always()
+        run: node scripts/write-checksums.cjs
+      - name: Save test evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-evidence-${{ matrix.os }}-${{ matrix.arch }}
+          path: |
+            app/artifacts/phase6/
+            app/artifacts-package-inventory.json
+          retention-days: 1
+      - name: Save installers (unsigned preview)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: receipt-ai-${{ matrix.os }}-${{ matrix.arch }}
+          path: |
+            app/release/*.AppImage
+            app/release/*.rpm
+            app/release/*.exe
+            app/release/*.dmg
+            app/release/*.zip
+            app/release/SHA256SUMS
+            app/release/artifact-inventory.json
+            app/release/sources/*.tar
+          compression-level: 0
+          retention-days: 1

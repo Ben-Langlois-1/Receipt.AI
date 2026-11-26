@@ -178,7 +178,17 @@ test('the same statement imports to the same ids, and a manual category survives
 test('the committed Chase example is the exact canonical file', () => {
   const result = importStatement(readBank('chase-checking.csv'), { account: 'Chase Checking' })
   assert.equal(result.ok, true)
-  assert.equal(toCanonicalCsv(result.transactions), readFileSync('fixtures/expected/chase-checking.csv', 'utf8'))
+  const expected = readFileSync('fixtures/expected/chase-checking.csv', 'utf8')
+  assert.equal(toCanonicalCsv(result.transactions), expected)
+  // The bank export contains one ATM fee. The canonical example must retain it
+  // exactly once, with the same independent counts and cent totals as the source.
+  const canonical = importStatement(expected)
+  assert.equal(canonical.ok, true)
+  assert.equal(canonical.transactions.length, 12)
+  assert.equal(new Set(canonical.transactions.map(row => row.external_id)).size, 12)
+  assert.equal(canonical.transactions.filter(byDescription('ATM FEE')).length, 1)
+  assert.equal(summarize(canonical.transactions).outflowCents, 306575)
+  assert.equal(summarize(canonical.transactions).inflowCents, 490000)
 })
 
 test('canonical csv parses back as records', () => {

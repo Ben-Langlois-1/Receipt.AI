@@ -356,3 +356,18 @@ button:focus-visible {
 .trend-income-point {
   stroke: #81f09f;
 }
+/* AI Advisor MVP */
+.ai-advisor { display: grid; gap: 16px; }
+.advisor-suggestions { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+.advisor-suggestion { border: 1px solid #aebac6; background: transparent; color: inherit; border-radius: 8px; padding: 7px 10px; cursor: pointer; }
+.advisor-form { display: grid; gap: 8px; margin-top: 12px; }
+.advisor-form textarea { width: 100%; box-sizing: border-box; border: 1px solid #aebac6; border-radius: 8px; padding: 12px; background: var(--surface, #fff); color: #1b1f24; font: inherit; }
+.advisor-actions { display: flex; gap: 8px; }
+.advisor-actions button { border: 0; border-radius: 8px; padding: 8px 14px; cursor: pointer; background: #3a7dce; color: #fff; }
+.advisor-actions button:disabled { opacity: .6; cursor: default; }
+.advisor-error { color: #b3312e; }
+.advisor-response { white-space: pre-wrap; }
+.advisor-figures { border: 1px solid #aebac6; border-radius: 8px; padding: 12px; margin: 12px 0; }
+.advisor-figures dl { display: grid; grid-template-columns: max-content 1fr; gap: 6px 16px; }
+.advisor-figures dd { margin: 0; font-variant-numeric: tabular-nums; }
+.advisor-markdown p, .advisor-markdown li { overflow-wrap: anywhere; }

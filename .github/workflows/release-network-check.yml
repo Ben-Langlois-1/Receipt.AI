@@ -1,0 +1,22 @@
+name: Release network policy diagnostics
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  windows-enforcement:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Verify per-family program rules and profile restoration
+        run: node app/scripts/check-windows-network.cjs
+  mac-enforcement:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Verify owned PF anchor enforcement and reference cleanup
+        run: node app/scripts/release-network-macos.cjs

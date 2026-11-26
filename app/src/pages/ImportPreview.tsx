@@ -17,7 +17,7 @@ export default function ImportPreview ({ filename, importResult, onClose, onConf
 
     <section 
         className="import-result" 
-        aria-role="dialog"
+        role="dialog"
         aria-modal="true"
         aria-labelledby="import-preview-title">
 

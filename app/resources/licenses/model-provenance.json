@@ -1,0 +1,12 @@
+{
+  "file": "Qwen3-1.7B-Q4_K_M.gguf",
+  "sha256": "d2387ca2dbfee2ffabce7120d3770dadca0b293052bc2f0e138fdc940d9bc7b5",
+  "embeddedMetadata": {
+    "architecture": "qwen3",
+    "name": "Qwen3 1.7B",
+    "license": "apache-2.0",
+    "licenseLink": "https://huggingface.co/Qwen/Qwen3-1.7B/blob/main/LICENSE",
+    "baseModel": "https://huggingface.co/Qwen/Qwen3-1.7B-Base"
+  },
+  "note": "Approved local artifact. Current upstream quantized variants can have different hashes; build CI must receive this exact approved artifact. End users do not download it separately."
+}

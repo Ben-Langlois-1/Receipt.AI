@@ -11,4 +11,3 @@ date,posted_date,description,amount,currency,direction,category,account,source_b
 2026-02-03,,NETFLIX.COM 866-579-7172 CA,-15.99,USD,outflow,Subscriptions,Chase Checking,chase_checking,cecb1d36d2d447da
 2026-02-05,,ACME PAYROLL PPD ID: 998877,2450.00,USD,inflow,Income,Chase Checking,chase_checking,6bdf6eb89747a277
 2026-02-15,,RENT PAYMENT OAK APARTMENTS,-1400.00,USD,outflow,Housing,Chase Checking,chase_checking,8768a4cb157efcb8
-2026-01-20,,ATM FEE,-2.50,USD,outflow,Fees,Chase Checking,chase_checking,2b7ceba14802739c
